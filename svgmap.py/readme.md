@@ -24,7 +24,7 @@ The following global options are avaiable
 * **--force-overwrite**, **-f** by default, existing files will not be overwritten in batch mode, unless you set this parameter
 
 
-## Available Commands
+### Available Commands
 
 Currently the the following *commands* are available
 
@@ -33,7 +33,7 @@ Currently the the following *commands* are available
 	svgmap.py regions
 	svgmap.py layer
 
-### World Map
+## World Maps
 
 The command **svgmap.py world** renders a map of all countries in the world. Currently, the [Natural Earth Projection](http://www.shadedrelief.com/NE_proj/)  is used, but more projections will be added in the future. 
 
@@ -47,7 +47,7 @@ Command-specific options are:
 
 * **--sea**, **-s** adds a sea background to the map
 
-### Country Map
+## Country Maps
 
 Renders maps that are centered on a country.
 
@@ -61,7 +61,7 @@ To render a map of Germany to DE.svg, simply type
 
 ![Map of Germany](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/DEU.svg.png)
 
-In the next example, the surrounding countries are added using the *--context* parameter. Also, a padding of 3% is set.
+In the next example, the surrounding countries are added using the *--context* parameter. Also, a padding of 10% is set.
 
 	svgmap.py country DEU --h 300 --context --sea --padding 10 --ratio 2 -o DEU-context.svg
 
@@ -81,17 +81,19 @@ Command-specify options are:
 * **--context-quality** use this if you want to set a different quality for the context (usually a lower quality)
 * **--sea** will add a background indicating the sea
 
-### Region Map
+## Region Maps
 
 Basically just like the **country** command, but for the selected country, the administrative-level-1 regions will be rendered instead of the country. Provides the same options as country.
 
 	svgmap.py regions FRA --h 300 -o FRA-regions.svg
 
-![Region map of France](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/FRA-regions.svg)
+![Region map of France](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/FRA-regions.svg.png)
+
+You can add context the same way as in country maps.
 
 	svgmap.py regions FRA --h 300 --context --sea --padding 10 --ratio 2 -o FRA-regions-context.svg
 
-![Region map of France with context](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/FRA-regions-context.svg)
+![Region map of France with context](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/FRA-regions-context.svg.png)
 
 
 ### Adding Shapefile Layers
