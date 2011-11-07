@@ -127,7 +127,7 @@ To give a second example we render a country map of the United States and then a
 	svgmap.py country USA -o USA.svg
 	svgmap.py layer USA.svg census2000/co99_d00.shp -o USA-counties.svg
 
-![United States with all counties](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/USA-counties.svg.png)
+![United States with all counties](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/USA2.svg.png)
 
 Command-specific parameters are:
 
