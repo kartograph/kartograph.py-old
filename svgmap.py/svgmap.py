@@ -261,7 +261,7 @@ def init_svg_canvas(view, bbox, globe, center_lat, center_lon, proj='laea'):
 	
 	global options
 	
-	w = view.widthope
+	w = view.width
 	h = view.height+2
 	
 	svg = canvas(width='%dpx' % w, height='%dpx' % h, viewBox='0 0 %d %d' % (w, h), enable_background='new 0 0 %d %d' % (w, h), style='stroke-width:1px; stroke-linejoin: round; stroke:#444; fill:white;')
@@ -314,9 +314,11 @@ def _getPolygons(shp, id, globe, view, data=None):
 	return polys
 
 
-def _get_polygon_data(rec):
-	return { 'subid':rec[7], 'objectid': rec[0] }
-
+def _get_polygon_data(rec, region=False):
+	if region:
+		return { 'region':rec[7], 'oid': rec[0], 'iso': rec[2] }
+	else:
+		return { 'iso': rec[29] }
 
 def get_polygons_country(iso3, shprec, viewBox, view, globe, regions=False):
 	"""
@@ -330,7 +332,7 @@ def get_polygons_country(iso3, shprec, viewBox, view, globe, regions=False):
 		for j in country_region_shapes:
 			rec = region_recs[j]
 			shp = region_sf.shapeRecord(j).shape
-			_addPolygons(polys, _getPolygons(shp, iso3, globe, view, data=_get_polygon_data(rec)))
+			_addPolygons(polys, _getPolygons(shp, iso3, globe, view, data=_get_polygon_data(rec, regions=True)))
 	else:
 		shp = shprec.shape
 		rec = shprec.record
@@ -371,7 +373,7 @@ def get_polygons_country_context(country_iso3, shprec, viewBox, view, globe, reg
 				for j in country_region_shapes:
 					rec = region_recs[j]
 					shp = region_sf.shapeRecord(j).shape
-					_addPolygons(polygons, _getPolygons(shp, iso3, globe, view, data=_get_polygon_data(rec)))
+					_addPolygons(polygons, _getPolygons(shp, iso3, globe, view, data=_get_polygon_data(rec, regions=True)))
 			else:
 				# we don't have regions, instead use the country itself
 				_addPolygons(polygons, _getPolygons(focus_shape, iso3, globe, view))
@@ -516,11 +518,9 @@ def add_map_layer(svg, polygons, layerId, filter=None, useInt=True):
 		poly = group[0]
 		svg_path['data-iso'] = poly.id
 		
-		if 'subid' in poly.data and poly.data['subid'] != "":
-			svg_path['data-regid'] = poly.data['subid']
-		if 'objectid' in poly.data and poly.data['objectid'] != "":
-			svg_path['data-oid'] = poly.data['objectid']
-		
+		for key in poly.data:
+			svg_path['data-'+key] = poly.data[key]
+				
 		svgGroup.append(svg_path)
 	
 
@@ -938,40 +938,14 @@ def save_or_display(svg, iso3, outfile):
 		if outfile == None: outfile = 'tmp/'+iso3+'.svg'
 		if not os.path.isdir('tmp'):
 			os.mkdir('tmp')
-		svg.save(outfile)
+		# svg.save(outfile)
+		open(outfile, 'w').write(svg.standalone_xml(indent="  ", newl=""))
 		if options.verbose: print "stored as "+outfile
 	else:
 		svg.firefox()
 
 
 
-
-"""
-if cmd == "all":
-
-	for iso3, area in country_areas:
-		if iso3 in ignore:
-			print "ignoring", iso3
-			continue
-		print "rendering", iso3
-		render_country_and_context(iso3)
-	
-	
-elif cmd == "single":
-
-	if len(sys.argv) > 1:
-		iso3 = sys.argv[1]
-		if len(sys.argv) > 2:
-			fn = sys.argv[2]
-			render_country_and_context(iso3, outfile=fn)
-		else:
-			render_country_and_context(iso3)
-	
-	
-else:
-	print "unknown command:", cmd
-	
-"""
 
 
 class Options(object):
