@@ -7,18 +7,11 @@ svgmap.py
 
 The following Python libraries are required:
 
-* shapefile
-* Polygon
-* SVGfig
+* [shapefile](http://packages.python.org/Python%20Shapefile%20Library/)
+* [Polygon](http://pypi.python.org/pypi/Polygon/1.17)
+* [svgfig](http://code.google.com/p/svgfig/)
 
-### Commands and Global Options
-
-Currently the the following *commands* are available
-
-	svgmap.py world
-	svgmap.py country
-	svgmap.py regions
-	svgmap.py layer
+### Global Options
 
 The following global options are avaiable
 
@@ -29,15 +22,31 @@ The following global options are avaiable
 * **--output**, **-o** filename for the SVG map, if not provided *tmp.svg* will be used.
 * **--padding**, **-p** how much spacing should be added around the map content
 
-### Rendering a World Map
 
-The command **svgmap.py world** renders a map of all countries in the world. For instance, this will output the file world.svg:
+## Available Commands
+
+Currently the the following *commands* are available
+
+	svgmap.py world
+	svgmap.py country
+	svgmap.py regions
+	svgmap.py layer
+
+### World Map
+
+The command **svgmap.py world** renders a map of all countries in the world. Currently, the [Natural Earth Projection](http://www.shadedrelief.com/NE_proj/)  is used, but more projections will be added in the future. 
+
+For instance, this will output a world map the file world.svg:
 
 	svgmap.py world --sea --width 600 --o world.svg
 
 The resulting SVG will look like this:
 
 ![world map](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/world.svg.png)
+
+Command-specific options are:
+
+* **--sea**, **-s** adds a sea background to the map
 
 ### Country Map
 
@@ -67,6 +76,8 @@ Basically just like the **country** command, but for the selected country, the a
 ### Adding Shapefile Layers
 
 This can be used to add another layer to a SVG map. 
+
+## Details
 
 ### Quality
 
