@@ -22,3 +22,10 @@ Of course, there are plenty of possible options, see readme in svgmap.py directo
 **svgmap.js** will then load the SVG maps and allows to connect the maps with some data. You can color the map polygons (which could be countries, for instance) to get a chloropleth map, or you can add labels or charts at geo-locations etc.
 
 Again, see readme in svgmap.js directory to get more information.
+
+
+### About the Maps
+
+The maps are taken from [Natural Earth](http://www.naturalearthdata.com) project.
+
+![made with Natural Earth](http://www.naturalearthdata.com/wp-content/uploads/2009/08/NEV-Logo-Black_sm.png)
