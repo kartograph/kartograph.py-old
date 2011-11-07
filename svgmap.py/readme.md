@@ -11,7 +11,7 @@ The following Python libraries are required:
 * Polygon
 * SVGfig
 
-### Commands
+### Commands and Global Options
 
 Currently the the following *commands* are available
 
@@ -20,7 +20,7 @@ Currently the the following *commands* are available
 	svgmap.py regions
 	svgmap.py layer
 
-### Global options
+The following global options are avaiable
 
 * **--width**, **-w** output width
 * **--height**, **-h** output height
@@ -29,9 +29,15 @@ Currently the the following *commands* are available
 * **--output**, **-o** filename for the SVG map, if not provided *tmp.svg* will be used.
 * **--padding**, **-p** how much spacing should be added around the map content
 
-### World Map
+### Rendering a World Map
 
-The command **svgmap.py world** renders a map of all countries in the world.
+The command **svgmap.py world** renders a map of all countries in the world. For instance, this will output the file world.svg:
+
+	svgmap.py world --sea --width 600 --o world.svg
+
+The resulting SVG will look like this:
+
+![world map]()
 
 ### Country Map
 
