@@ -1,7 +1,11 @@
 svgmap.py
 =====
 
-**svgmap.py** is a Python script that renders shapefiles to SVG maps. At the moment, the country shapesfiles are taken from the Natural Earth project.
+**svgmap.py** is a Python script that renders shapefiles to SVG maps. The idea is to include any information that can be used to identify. For instance, the path that represents Argentina will store the ISO-code in a data-attribute:
+
+	<path data-iso="ARG" d="" />
+
+Also, the SVG files store information on the projection parameters, which can be used by the JS API to reconstruct the projection in order to add more geo-located layers and features (like markers).
 
 ### Prerequisites
 
@@ -128,5 +132,7 @@ Command-specific parameters are:
 
 ### Quality
 
-The quality level will be used to compute the parameter for the polygon simplification (also called *generalization*). A quality of 100 means no simplification.
+The quality level will be used to compute the parameter for the polygon simplification (also called *generalization*). The higher the quality, the less the polygons are simplified. A quality of 100 means no simplification. Note that the overall quality also depends on the output size.
+
+![different qualities](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/quality.png)
 
