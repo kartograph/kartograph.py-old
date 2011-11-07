@@ -35,9 +35,9 @@ Currently the the following *commands* are available
 
 ## World Maps
 
-The command **svgmap.py world** renders a map of all countries in the world. Currently, the [Natural Earth Projection](http://www.shadedrelief.com/NE_proj/)  is used, but more projections will be added in the future. 
+The command **svgmap.py world** renders a map of all countries in the world. The used shapefile comes from the [Natural Earth project](http://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/). Currently, the [Natural Earth Projection](http://www.shadedrelief.com/NE_proj/)  is used, but more projections will be added in the future. 
 
-For instance, this will output a world map the file world.svg:
+For instance, this will output a world map into world.svg:
 
 	svgmap.py world --sea --width 600 --o world.svg
 
@@ -96,9 +96,33 @@ You can add context the same way as in country maps.
 ![Region map of France with context](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/FRA-regions-context.svg.png)
 
 
-### Adding Shapefile Layers
+## Adding Shapefile Layers
 
-This can be used to add another layer to a SVG map. 
+This can be used to add another layer to a SVG map. In general, every layer is represented by a SVG group (<g>). The following example demonstrates the feature:
+
+At first we create a country map of Brazil with some context.
+
+	svgmap country BRA --context --height 300 -p6 -s -o BRA.svg
+
+![Map of Brazil with context](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/BRA.svg.png)
+
+Now we add a new layer for current forests, taken from [Global Forest Watch](http://ims.missouri.edu/gfwmetadataexplorer/).
+
+	svgmap layer BRA.svg globalforestwatch/w_curr.shp -o BRA-forests.svg
+
+![Map of Brazil with context](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/BRA-forests.svg.png)
+
+If we want just the forests in Brazil, we can use the *--crop-to-layer* parameter. We have to define the layer id to which the shapefile should be cropped to (in this case, the layer id is "BRA"):
+
+	svgmap layer BRA.svg globalforestwatch/w_curr.shp --crop-to-layer=BRA -o BRA-forests-cropped.svg
+
+![Map of Brazil with context](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/BRA-forests-cropped.svg.png)
+
+Command-specific parameters are:
+
+* **--layer-id** will be used as id for the layer
+* **--crop-to-layer** can be used to crop the shape to any existing layer
+
 
 ## Details 
 
