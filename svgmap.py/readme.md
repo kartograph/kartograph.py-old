@@ -37,7 +37,7 @@ The command **svgmap.py world** renders a map of all countries in the world. For
 
 The resulting SVG will look like this:
 
-![world map]()
+![world map](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/world.svg.png)
 
 ### Country Map
 
