@@ -106,33 +106,27 @@ This can be used to add another layer to a SVG map. In general, every layer is r
 
 At first we create a country map of Brazil with some context.
 
-	svgmap.py country BRA --context --height 300 -p6 -s -o BRA.svg
+	svgmap country BRA --context --height 300 -p6 -s -o BRA.svg
 
 ![Map of Brazil with context](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/BRA.svg.png)
 
 Now we add a new layer for current forests, taken from [Global Forest Watch](http://ims.missouri.edu/gfwmetadataexplorer/).
 
-	svgmap.py layer BRA.svg globalforestwatch/w_curr.shp -o BRA-forests.svg
+	svgmap layer BRA.svg globalforestwatch/w_curr.shp -o BRA-forests.svg
 
 ![Map of Brazil with context](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/BRA-forests.svg.png)
 
 If we want just the forests in Brazil, we can use the *--crop-to-layer* parameter. We have to define the layer id to which the shapefile should be cropped to (in this case, the layer id is "BRA"):
 
-	svgmap.py layer BRA.svg globalforestwatch/w_curr.shp --crop-to-layer=BRA -o BRA-forests-cropped.svg
+	svgmap layer BRA.svg globalforestwatch/w_curr.shp --crop-to-layer=BRA -o BRA-forests-cropped.svg
 
 ![Map of Brazil with context](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/BRA-forests-cropped.svg.png)
-
-To give a second example we render a country map of the United States and then add a second layer for all counties, taken from the [Census 2000 shapefile](http://www.census.gov/geo/www/cob/co2000.html#shp).
-
-	svgmap.py country USA -o USA.svg
-	svgmap.py layer USA.svg census2000/co99_d00.shp -o USA-counties.svg
-
-![United States with all counties](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/USA-counties.svg.png)
 
 Command-specific parameters are:
 
 * **--layer-id** will be used as id for the layer
 * **--crop-to-layer** can be used to crop the shape to any existing layer
+
 
 ## Details 
 
