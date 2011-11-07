@@ -39,7 +39,7 @@ Currently the the following *commands* are available
 
 ## World Maps
 
-The command **svgmap.py world** renders a map of all countries in the world. The used shapefile comes from the [Natural Earth project](http://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/). Currently, the [Natural Earth Projection](http://www.shadedrelief.com/NE_proj/)  is used, but more projections will be added in the future. 
+The command **svgmap.py world** renders a map of all countries in the world. The shapefiles come from the [Natural Earth project](http://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/). Currently, the [Natural Earth Projection](http://www.shadedrelief.com/NE_proj/)  is used, but more projections will be added in the future. 
 
 For instance, this will output a world map into world.svg:
 
@@ -53,19 +53,19 @@ Command-specific options are:
 
 ## Country Maps
 
-Renders maps that are centered on a country.
+Renders maps that are centered on a country. You need to pass a three-letter country code ([ISO 3166-1 alpha 3](http://en.wikipedia.org/wiki/ISO_3166-1_alpha-3)) as argument.
 
 Usage:
 
-	svgmap.py country ISOCODES
+	svgmap.py country ISO
 
-To render a map of Germany to DE.svg, simply type
+To render a map of Germany you would run
 
 	svgmap.py country DEU --height 300 -o DEU.svg
 
 ![Map of Germany](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/DEU.svg.png)
 
-In the next example, the surrounding countries are added using the *--context* parameter. Also, a padding of 10% is set.
+In the next example, the surrounding countries are added using the *--context* parameter. Also, the padding is set to 10%  and the output ratio is set to 2 (width is two times height):
 
 	svgmap.py country DEU --h 300 --context --sea --padding 10 --ratio 2 -o DEU-context.svg
 
