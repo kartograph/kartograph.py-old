@@ -53,7 +53,7 @@ Command-specific options are:
 
 ## Country Maps
 
-Renders maps that are centered on a country. You need to pass a three-letter country code ([ISO 3166-1 alpha 3](http://en.wikipedia.org/wiki/ISO_3166-1_alpha-3)) as argument.
+Renders maps that are centered on a country. You need to pass a three-letter country code ([ISO 3166-1 alpha 3](http://en.wikipedia.org/wiki/ISO_3166-1_alpha-3)) as argument. For the country and regions maps the [Lambert Azimuthal Equal-Area projection](http://en.wikipedia.org/wiki/Lambert_azimuthal_equal-area_projection) is used (again, more projections to come in future versions).
 
 Usage:
 
