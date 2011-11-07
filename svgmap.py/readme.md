@@ -45,7 +45,7 @@ For instance, this will output a world map into world.svg:
 
 	svgmap.py world --sea --width 600 --o world.svg
 
-![world map](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/world.svg.png)
+[![world map](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/world.svg.png)](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/world.svg)
 
 Command-specific options are:
 
