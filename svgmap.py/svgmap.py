@@ -12,7 +12,8 @@ def usage():
 	print 'Possible commands are:\n'
 	
 	print '   country      renders country boundary'
-	print '   regions      renders admin-level 1 regions'
+	print '   regions      renders all admin-level 1 regions of a country'
+	print '   region       renders a single admin-level 1 region of a country'
 	print '   world        renders world map'
 	print '   layer        adds a new layer from a shapefile'
 	print
@@ -27,6 +28,8 @@ def main():
 		render_world_map()
 	elif command in ("country", "regions"):
 		render_regions_or_country()
+	elif command == "region":
+		render_region()
 	elif command == "layer":
 		add_shapefile_layer()
 
@@ -41,7 +44,7 @@ def parse_args():
 	
 	command = sys.argv[1]
 	
-	if command not in ('country','regions','world','layer'):
+	if command not in ('country','regions','world','layer','region'):
 		usage()
 		sys.exit(2)
 	
@@ -137,10 +140,11 @@ custom_country_center = {}
 custom_country_center['USA'] = (-98.606,39.622)
 
 
-import shapefile, gisutils, csv, sys
-from svgfig import *
-from gisutils import Point, Bounds2D, View, clipToRect, shape_area, merge_polygons
+import shapefile, csv, sys
 
+from svgfig import *
+from lib.gisutils import *
+from lib import proj
 
 def load_shapefiles():
 	"""
@@ -149,8 +153,8 @@ def load_shapefiles():
 	global command, options
 	global country_sf, country_recs, country_shapes, country_index, country_areas, join_csv_src 
 	
-	country_sf_src = options.data_path + 'ne_10m_admin_0_countries'
-	region_sf_src = options.data_path + 'ne_10m_admin_1_states_provinces_shp'
+	country_sf_src = options.data_path + 'shp/ne_10m_admin_0_countries'
+	region_sf_src = options.data_path + 'shp/ne_10m_admin_1_states_provinces_shp'
 	join_csv_src = options.data_path + 'region_joins.csv'
 
 	print "loading country shapefile"
@@ -233,7 +237,7 @@ def get_bounding_box(iso3, shape, globe):
 	areas = []
 	for j in range(0,len(parts)-1):
 		pts = shape.points[parts[j]:parts[j+1]]
-		a = gisutils.area(pts)
+		a = area(pts)
 		areas.append(a)
 	max_area = max(areas)
 	
@@ -253,7 +257,7 @@ def get_bounding_box(iso3, shape, globe):
 	return bbox
 
 
-def init_svg_canvas(view, bbox, globe, center_lat, center_lon, proj='laea'):
+def init_svg_canvas(view, bbox, globe, center_lat, center_lon):
 	"""
 	prepare a blank new svg file
 	"""
@@ -308,7 +312,7 @@ def _getPolygons(shp, id, globe, view, data=None):
 		if points == None: continue
 		for xy in points:
 			poly_points.append(view.project(Point(xy[0], xy[1])))
-		polygon = gisutils.Polygon(id, poly_points, mode='point', data=data)
+		polygon = Polygon(id, poly_points, mode='point', data=data)
 		if polygon != None:
 			polys.append(polygon)
 	return polys
@@ -316,9 +320,12 @@ def _getPolygons(shp, id, globe, view, data=None):
 
 def _get_polygon_data(rec, region=False):
 	if region:
-		return { 'region':rec[7], 'oid': rec[0], 'iso': rec[2] }
+		data = { 'region':rec[7], 'oid': rec[0], 'iso': rec[2] }
 	else:
-		return { 'iso': rec[29] }
+		data = { 'iso': rec[29] }
+	if sx != None:
+		data['sx'] = sx
+	return data	
 
 def get_polygons_country(iso3, shprec, viewBox, view, globe, regions=False):
 	"""
@@ -376,7 +383,7 @@ def get_polygons_country_context(country_iso3, shprec, viewBox, view, globe, reg
 					_addPolygons(polygons, _getPolygons(shp, iso3, globe, view, data=_get_polygon_data(rec, regions=True)))
 			else:
 				# we don't have regions, instead use the country itself
-				_addPolygons(polygons, _getPolygons(focus_shape, iso3, globe, view))
+				_addPolygons(polygons, _getPolygons(focus_shape, iso3, globe, view, country_index[iso3]))
 				if regions and options.verbose:
 					print "..no regions for ",iso3
 	return polygons
@@ -425,11 +432,10 @@ def simplify_polygons(polygons, focusFilter=None):
 	simplifies or generalizes a list of polygons
 	"""
 	global options
-	from gisutils import simplify
 	
 	if options.verbose: print "simplifying polygons"
 	# join duplicate points
-	gisutils.unify(polygons)
+	unify(polygons)
 	
 	if focusFilter != None:
 		focus = []
@@ -474,7 +480,7 @@ def clip_polygons(polygons, viewBox):
 
 
 
-def group_polygons(polygons, groupBy='objectid'):
+def group_polygons(polygons, groupBy):
 	"""
 	groups polygons that share a common attribute specified in groupBy parameter
 	"""
@@ -494,7 +500,8 @@ def group_polygons(polygons, groupBy='objectid'):
 	return groups
 	
 
-def add_map_layer(svg, polygons, layerId, filter=None, useInt=True):
+
+def add_map_layer(svg, polygons, layerId, filter=None, useInt=True, groupBy='objectid'):
 	"""
 	add a layer to the map
 	"""
@@ -507,7 +514,7 @@ def add_map_layer(svg, polygons, layerId, filter=None, useInt=True):
 	svgGroup = SVG('g', id=layerId)
 	svg.append(svgGroup)
 	
-	polyGroups = group_polygons(polygons)
+	polyGroups = group_polygons(polygons, groupBy)
 	
 	for group in polyGroups:
 		path_str_arr = []
@@ -516,7 +523,7 @@ def add_map_layer(svg, polygons, layerId, filter=None, useInt=True):
 		
 		svg_path = SVG('path', d=' '.join(path_str_arr))
 		poly = group[0]
-		svg_path['data-iso'] = poly.id
+		# svg_path['data-iso'] = poly.id
 		
 		for key in poly.data:
 			svg_path['data-'+key] = poly.data[key]
@@ -524,7 +531,7 @@ def add_map_layer(svg, polygons, layerId, filter=None, useInt=True):
 		svgGroup.append(svg_path)
 	
 
-def draw_map(country_iso3, svg, polygons, useInt=True, randomColors=False, labels=False):
+def draw__map(country_iso3, svg, polygons, useInt=True, randomColors=False, labels=False):
 	"""
 	DEPRECATED, use add_map_layer instead
 	add country polygons to SVG
@@ -627,7 +634,6 @@ def get_country_center(iso3, shp):
 	"""
 	global custom_country_center
 	
-	from gisutils import shape_center
 	if iso3 in custom_country_center:
 		return custom_country_center[iso3]
 	else:
@@ -641,10 +647,7 @@ WORLD MAP CODE BELOW
 def render_world_map():
 	"""
 	...
-	"""
-	import proj
-	from gisutils import Polygon
-	
+	"""	
 	globe = proj.NaturalEarth()
 	
 	bbox = Bounds2D()
@@ -675,21 +678,11 @@ def render_world_map():
 			
 		sea = Polygon('sea', sea_pts, mode='point')	
 		svg.append(SVG('path', d=sea.svgPathString(useInt=False), style='fill:#d0ddf0', id="sea"))
-		
 	
 	load_shapefiles()	
-	
 	polygons = get_polygons_world(globe, view)
-	
 	simplify_polygons(polygons)
-	
 	add_map_layer(svg, polygons, 'countries')
-	
-
-	# experimental: add layer for forests
-	
-	
-
 	save_or_display(svg, 'worldmap', options.out_file)
 
 
@@ -761,8 +754,6 @@ def render_country(iso3, outfile=None, regions=False):
 	"""
 	renders a single country
 	"""
-	import proj
-	
 	shprec = get_country_shape(iso3)
 	rec = shprec.record
 	shp = shprec.shape
@@ -789,7 +780,7 @@ def render_country(iso3, outfile=None, regions=False):
 	
 	polygons = clip_polygons(polygons, viewBox)
 	
-	add_map_layer(svg, polygons, iso3)
+	add_map_layer(svg, polygons, iso3, groupBy='iso')
 			
 	save_or_display(svg, iso3, outfile)
 
@@ -799,9 +790,6 @@ def render_country_and_context(iso3, outfile=None, regions=False):
 	"""
 	renders a country with surrounding countries
 	"""
-	from gisutils import Bounds2D
-	import proj
-	
 	global options
 	
 	shprec = get_country_shape(iso3) # get center shape
@@ -838,8 +826,8 @@ def render_country_and_context(iso3, outfile=None, regions=False):
 	polygons = clip_polygons(polygons, viewBox)
 	
 	#draw_map(country_iso3, svg, polygons)
-	add_map_layer(svg, polygons, 'context', filter=_context)
-	add_map_layer(svg, polygons, iso3, filter=_focus)
+	add_map_layer(svg, polygons, 'context', filter=_context, groupBy='objectid')
+	add_map_layer(svg, polygons, iso3, filter=_focus, groupBy='iso')
 
 	# add geoip locations for debbugging purpose
 	
@@ -853,7 +841,7 @@ def add_shapefile_layer():
 	"""
 	adds the content of a shapefile as a new map layer
 	"""
-	import svgfig, proj
+	import svgfig
 	
 	svg = svgfig.load(options.svg_src)
 	
@@ -902,14 +890,25 @@ def add_shapefile_layer():
 	
 	sf = shapefile.Reader(options.shapefile_src)
 	
+	fields = []
+	for f in sf.fields:
+		fields.append(f[0].lower().replace('_','-'))
+	
 	shprecs = sf.shapeRecords()
 	polygons = []
-	for shprec in shprecs:
-		shp = shprec.shape
-		polys = _getPolygons(shp, "", globe, view)
+	
+	for sx in range(len(shprecs)):
+		shp = shprecs[sx].shape
+		rec = shprecs[sx].record
+		data = { 'sx': sx }
+		for i in range(len(rec)):
+			data[fields[i]] = rec[i]
+		polys = _getPolygons(shp, "", globe, view, data=data)
 		for poly in polys:
 			if poly.bbox.intersects(viewbox):
 				polygons.append(poly)
+	
+	print len(polygons)
 	
 	simplify_polygons(polygons)
 	polygons = clip_polygons(polygons, viewbox)
@@ -923,10 +922,8 @@ def add_shapefile_layer():
 			if poly_ != None:
 				out += poly_to_polygons(poly_, id=polygon.id, data=polygon.data)
 		polygons = out
-	
-	print polygons
-	
-	add_map_layer(svg, polygons, 'layer')
+		
+	add_map_layer(svg, polygons, 'layer', groupBy='sx')
 	
 	save_or_display(svg, "", options.out_file)
 	
