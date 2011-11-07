@@ -1,9 +1,9 @@
 svgmap.py
 =====
 
-**svgmap.py** is a Python script that renders shapefiles to SVG maps. The idea is to include any information that can be used to identify. For instance, the path that represents Argentina will store the ISO-code in a data-attribute:
+**svgmap.py** is a Python script that renders shapefiles to SVG maps. The idea is to include any information that can be used to identify the represented geography. For instance, the path that represents Argentina will store the ISO-code in a data-attribute:
 
-	<path data-iso="ARG" d="" />
+	<path data-iso="ARG" .. />
 
 Also, the SVG files store information on the projection parameters, which can be used by the JS API to reconstruct the projection in order to add more geo-located layers and features (like markers).
 
