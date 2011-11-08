@@ -487,7 +487,7 @@ def merge_polygons(polygons, id='', data=None):
 		
 	poly = polygon_to_poly(polygons[0])
 	for polygon in polygons[1:]:
-		poly2 = poly_to_poly2(polygon)
+		poly2 = polygon_to_poly(polygon)
 		poly = poly | poly2
 		
 	return poly_to_polygons(poly)

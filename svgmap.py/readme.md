@@ -37,9 +37,9 @@ Currently the the following *commands* are available
 	svgmap.py regions
 	svgmap.py layer
 
-## World Maps
+## Rendering world maps
 
-The command **svgmap.py world** renders a map of all countries in the world. The shapefiles come from the [Natural Earth project](http://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/). Currently, the [Natural Earth Projection](http://www.shadedrelief.com/NE_proj/)  is used, but more projections will be added in the future. 
+The command **world** renders a map of all countries in the world. The shapefiles come from the [Natural Earth project](http://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/). Currently, the [Natural Earth Projection](http://www.shadedrelief.com/NE_proj/)  is used, but more projections will be added in the future. 
 
 For instance, this will output a world map into world.svg:
 
@@ -51,9 +51,9 @@ Command-specific options are:
 
 * **--sea**, **-s** adds a sea background to the map
 
-## Country Maps
+## Rendering country maps
 
-Renders maps that are centered on a country. You need to pass a three-letter country code ([ISO 3166-1 alpha 3](http://en.wikipedia.org/wiki/ISO_3166-1_alpha-3)) as argument. For the country and regions maps the [Lambert Azimuthal Equal-Area projection](http://en.wikipedia.org/wiki/Lambert_azimuthal_equal-area_projection) is used (again, more projections to come in future versions).
+The **country** command renders maps that are centered on a country. You need to pass a three-letter country code ([ISO 3166-1 alpha 3](http://en.wikipedia.org/wiki/ISO_3166-1_alpha-3)) as argument. For the country and regions maps the [Lambert Azimuthal Equal-Area projection](http://en.wikipedia.org/wiki/Lambert_azimuthal_equal-area_projection) is used (again, more projections to come in future versions).
 
 Usage:
 
@@ -85,20 +85,31 @@ Command-specify options are:
 * **--context-quality** use this if you want to set a different quality for the context (usually a lower quality)
 * **--sea** will add a background indicating the sea
 
-## Region Maps
+## Mapping all regions of a country
 
-Basically just like the **country** command, but for the selected country, the administrative-level-1 regions will be rendered instead of the country. Provides the same options as country.
+The **regions** (plural!) command works basically just like the *country* command, except for the selected country, the administrative-level-1 regions will be rendered instead of the country. The command provides the same parameters that are provided in the *country* command.
 
 	svgmap.py regions FRA --h 300 -o FRA-regions.svg
 
 ![Region map of France](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/FRA-regions.svg.png)
 
-You can add context the same way as in country maps.
+For instance, you can add context the same way as in country maps.
 
 	svgmap.py regions FRA --h 300 --context --sea --padding 10 --ratio 2 -o FRA-regions-context.svg
 
 ![Region map of France with context](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/FRA-regions-context.svg.png)
 
+Command specific parameters:
+
+* **--join-regions** join regions according to external region list (see below)
+
+## Mapping a single region of a country
+
+*NOT IMPLEMENTED, YET*
+
+The **region** (singular!) command allows to render just a single region of a country.
+
+	svgmap.py region FRA 
 
 ## Adding Shapefile Layers
 
@@ -122,7 +133,7 @@ If we want just the forests in Brazil, we can use the *--crop-to-layer* paramete
 
 ![Map of Brazil with context](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/BRA-forests-cropped.svg.png)
 
-To give a second example we render a country map of the United States and then add a second layer for all counties, taken from the [Census 2000 shapefile](http://www.census.gov/geo/www/cob/co2000.html#shp).
+Here's another example: After rendering a country map of the United States we can add a layer for all counties spapes, taken from the [Census 2000 shapefile](http://www.census.gov/geo/www/cob/co2000.html#shp).
 
 	svgmap.py country USA -o USA.svg
 	svgmap.py layer USA.svg census2000/co99_d00.shp -o USA-counties.svg
@@ -142,3 +153,14 @@ The quality level will be used to compute the parameter for the polygon simplifi
 
 ![different qualities](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/quality.png)
 
+### Joining regions
+
+In some exceptional cases, the map data provided by Natural Earth admin-1 regions is too detailed. For instance, the following image shows the regions available for the United Kingdom. 
+
+![United Kingdom regions](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/GBR-regions.png)  
+
+Fortunately, in those cases the Natural Earth adm1 shapefile stores some values that identify the "parent" region. We can use this data to join regions. By now, there's a CSV file named *data/region_joins.csv* that stores a list of all regions that should be joined. You can activate region joining by setting the **--join-region** (**-j**) parameter.
+
+	svgmap.py regions GBR --join-regions
+
+![United Kingdom regions](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/GBR-regions-joined.png)

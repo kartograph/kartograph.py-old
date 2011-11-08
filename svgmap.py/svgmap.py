@@ -69,6 +69,10 @@ def parse_args():
 			opt_str += "c"	
 			cmd_args = sys.argv[3:]
 	
+	if command in ('regions', 'region'):
+		long_opt += ['join-regions']
+		opt_str += 'j'
+		
 	if command == "layer":
 		if len(sys.argv) < 4:
 			print "\nError: you must provide a svg-map and a shapefile\n\n"+os.path.basename(sys.argv[0])+' '+command+' SVGMAP.svg SHAPEFILE'
@@ -111,6 +115,8 @@ def parse_args():
 				options.crop_at_layer = a
 			elif o == '--layer-id':
 				options.layer_id = a
+			elif o in ('--join-regions', '-j'):
+				options.join_regions = True
 
 		options.applyDefaults()
 		
@@ -317,10 +323,22 @@ def _getPolygons(shp, id, globe, view, data=None):
 			polys.append(polygon)
 	return polys
 
+def _remove_unicode(str):
+	"""
+	taken from http://stackoverflow.com/questions/1207457/convert-unicode-to-string-in-python-containing-extra-symbols
+	"""
+	import unicodedata
+	return unicodedata.normalize('NFKD', str).encode('ascii','ignore')	
 
 def _get_polygon_data(rec, region=False):
 	if region:
-		data = { 'region':rec[7], 'oid': rec[0], 'iso': rec[2] }
+		data = { 'oid': rec[0], 'iso': rec[2] }
+		if rec[7] != "":
+			data['hasc'] = rec[7]
+		if rec[19] != "":
+			data['fips'] = rec[19][-2:]
+		if rec[7] == "" and rec[19] == "":
+			data['name'] =  _remove_unicode(rec[4].decode('ISO 8859-1'))
 	else:
 		data = { 'iso': rec[29] }
 	return data	
@@ -405,8 +423,8 @@ def join_regions(iso3, polygons):
 	out = []
 	
 	for poly in polygons:
-		if 'objectid' in poly.data and str(poly.data['objectid']) in join_map:
-			regId = join_map[str(poly.data['objectid'])]
+		if 'oid' in poly.data and str(poly.data['oid']) in join_map:
+			regId = join_map[str(poly.data['oid'])]
 			if regId == '': regId = 'n/a'
 			if regId not in groups:
 				groups[regId] = []
@@ -415,7 +433,7 @@ def join_regions(iso3, polygons):
 			out.append(poly)
 	
 	for gid in groups:
-		polys = merge_polygons(groups[gid], id=iso3, data={ 'subid': gid })
+		polys = merge_polygons(groups[gid], id=iso3, data={ 'r-id': gid })
 		for poly in polys:
 			out.append(poly)		
 			
@@ -499,7 +517,7 @@ def group_polygons(polygons, groupBy):
 	
 
 
-def add_map_layer(svg, polygons, layerId, filter=None, useInt=True, groupBy='objectid'):
+def add_map_layer(svg, polygons, layerId, filter=None, useInt=True, groupBy='oid'):
 	"""
 	add a layer to the map
 	"""
@@ -774,6 +792,9 @@ def render_country(iso3, outfile=None, regions=False):
 	
 	polygons = get_polygons_country(iso3, shprec, viewBox, view, globe, regions=regions)
 	
+	if regions and options.join_regions:
+		polygons = join_regions(iso3, polygons)
+	
 	simplify_polygons(polygons)
 	
 	polygons = clip_polygons(polygons, viewBox)
@@ -814,7 +835,8 @@ def render_country_and_context(iso3, outfile=None, regions=False):
 	
 	polygons = get_polygons_country_context(iso3, shprec, viewBox, view, globe, regions=regions)
 	
-	polygons = join_regions(iso3, polygons)
+	if regions and options.join_regions:
+		polygons = join_regions(iso3, polygons)
 	
 	_focus = lambda p: p.id == iso3
 	_context = lambda p: p.id != iso3
@@ -970,6 +992,8 @@ class Options(object):
 		self.layer_id = None
 		self.crop_at_layer = None
 	
+		# options for regions mode
+		self.join_regions = False
 	
 	def applyDefaults(self):
 	
