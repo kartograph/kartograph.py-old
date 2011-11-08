@@ -1,6 +1,6 @@
 #encoding: utf-8
 """
-    svgmap - a simple toolset that helps to create interactive thematic maps
+    svgmap - a simple toolset that helps creating interactive thematic maps
     Copyright (C) 2011  Gregor Aisch
 
     This program is free software: you can redistribute it and/or modify

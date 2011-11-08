@@ -1,7 +1,7 @@
 svgmap
 ======
 
-**svgmap** is a simple toolset that helps to create interactive thematic maps that run across multiple browsers without using tile-based mapping environments like Google Maps or OpenStreetMaps. Think of it as OpenLayers, but *a lot* more simple to use.
+**svgmap** is a simple toolset that helps creating interactive thematic maps that run across multiple browsers without using tile-based mapping environments like Google Maps or OpenStreetMaps. Think of it as OpenLayers, but *a lot* more simple to use.
 
 ## How it works
 
@@ -24,8 +24,27 @@ Of course, there are plenty of possible options, see readme in svgmap.py directo
 Again, see readme in svgmap.js directory to get more information.
 
 
+### License
+
+    svgmap - a simple toolset that helps creating interactive thematic maps
+    Copyright (C) 2011  Gregor Aisch
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+
 ### About the Maps
 
 The maps are taken from [Natural Earth](http://www.naturalearthdata.com) project.
 
 ![made with Natural Earth](http://www.naturalearthdata.com/wp-content/uploads/2009/08/NEV-Logo-Black_sm.png)
+
