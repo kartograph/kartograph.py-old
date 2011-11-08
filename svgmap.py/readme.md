@@ -165,10 +165,8 @@ The quality level will be used to compute the parameter for the polygon simplifi
 
 In some exceptional cases, the map data provided by Natural Earth admin-1 regions is too detailed. For instance, the following image shows the regions available for the United Kingdom. 
 
-![United Kingdom regions](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/GBR-regions.png)  
-
 Fortunately, in those cases the Natural Earth adm1 shapefile stores some values that identify the "parent" region. We can use this data to join regions. By now, there's a CSV file named *data/region_joins.csv* that stores a list of all regions that should be joined. You can activate region joining by setting the **--join-regions** (**-j**) parameter.
 
 	svgmap.py regions GBR --join-regions
 
-![United Kingdom regions](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/GBR-regions-joined.png)
+![United Kingdom regions](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/GBR-regions.png)   ![United Kingdom regions](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/GBR-regions-joined.png)
