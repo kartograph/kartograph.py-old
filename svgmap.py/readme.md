@@ -109,7 +109,15 @@ Command specific parameters:
 
 The **region** (singular!) command allows to render just a single region of a country.
 
-	svgmap.py region FRA 
+	svgmap.py region FRA --fips A4
+
+Command specific parameters:
+
+* **--fips** define the focus region by FIPS code
+* **--hasc** define the focus region by HASC code
+* **--name** define the focus region by name (will try to match minor spelling differences)
+* **--context** adds surrounding regions *and* countries
+* **--region-context** adds surrounding regions (no countries here)
 
 ## Adding Shapefile Layers
 
@@ -145,7 +153,7 @@ Command-specific parameters are:
 * **--layer-id** will be used as id for the layer
 * **--crop-to-layer** can be used to crop the shape to any existing layer
 
-## Details 
+## Advanced usage 
 
 ### Quality
 
@@ -159,7 +167,7 @@ In some exceptional cases, the map data provided by Natural Earth admin-1 region
 
 ![United Kingdom regions](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/GBR-regions.png)  
 
-Fortunately, in those cases the Natural Earth adm1 shapefile stores some values that identify the "parent" region. We can use this data to join regions. By now, there's a CSV file named *data/region_joins.csv* that stores a list of all regions that should be joined. You can activate region joining by setting the **--join-region** (**-j**) parameter.
+Fortunately, in those cases the Natural Earth adm1 shapefile stores some values that identify the "parent" region. We can use this data to join regions. By now, there's a CSV file named *data/region_joins.csv* that stores a list of all regions that should be joined. You can activate region joining by setting the **--join-regions** (**-j**) parameter.
 
 	svgmap.py regions GBR --join-regions
 
