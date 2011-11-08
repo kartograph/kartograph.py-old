@@ -1,11 +1,33 @@
 """
+    svgmap - a simple toolset that helps to create interactive thematic maps
+    Copyright (C) 2011  Gregor Aisch
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
+"""
 Map projections used in svgmap
 """
 import math 
 
+__known_projections__ = ('ortho', 'laea', 'naturalearth')
+
 class Orthographic(object):
 	"""
-	taken from http://www.mccarroll.net/snippets/svgworld/
+	Orthographic Azimuthal Projection
+	
+	implementation taken from http://www.mccarroll.net/snippets/svgworld/
 	"""
 	def __init__(self,latitude0,longitude0,r):
 		self.latitude0 = latitude0
@@ -55,9 +77,12 @@ class Orthographic(object):
 		xy = self.plot([(lat, lon)], truncate=False)
 		return xy[0]
 
-
 class LAEA(object):
-
+	"""
+	Lambert Azimuthal Equal-Area Projection
+	
+	implementation taken from http://www.epsg.org/guides/G7-2.html
+	"""
 	def __init__(self,latitude0,longitude0):
 		from math import radians as rad, asin, pi
 		self.name = 'laea'
@@ -141,13 +166,11 @@ class LAEA(object):
 	
 		return (x,y)
 
-
 class PlatteCarree(object):
 	
 	def project(self, lat, lon):
 		return (lon, lat)
-		
-		
+				
 class Robinson(object):
 	
 	def __init__(self):

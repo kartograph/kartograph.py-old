@@ -7,7 +7,7 @@ svgmap.py
 
 Also, the SVG files store information on the projection parameters, which can be used by the JS API to reconstruct the projection in order to add more geo-located layers and features (like markers).
 
-**Note** that creating perfectly styled static maps is *not* the purpose of this script, so you won't find any options to set colors or styles. Instead, you will get really nice geo-references vector maps. They are intended to be rendered inside browsers where you can add lot's of CSS and JavaScript magic. Or course, you can open and edit them in Inkscape/Illustrator, too.
+**Note** that creating perfectly styled static maps is *not* the purpose of this script, so you won't find any options to set colors or styles. Instead, you will get really nice geo-references vector maps. They are intended to be rendered inside browsers where you can add lot's of CSS and JavaScript magic. Of course, you can open and edit them in Inkscape/Illustrator, too.
 
 ### Prerequisites
 
