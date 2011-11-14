@@ -66,7 +66,8 @@ def parse_args():
 	long_opt = ['output=', 'width=', 'height=', 'ratio=', 'padding=', 'quality=', 'sea', 'force-overwrite', 'context-quality=', 'verbose', 'proj=']
 
 	if command == "world":
-		long_opt += ['graticule']
+		long_opt += ['graticule','lon0=','lat0=']
+		opt_str += 'g'
 		cmd_args = sys.argv[2:]
 	
 	if command in ('regions', 'country'):
@@ -111,7 +112,7 @@ def parse_args():
 				options.out_file = a
 			elif o in ('-c', '--context'):
 				options.add_context = True
-			elif o in ('-p', '--padding'):
+			elif o in ('--padding', '-p'):
 				options.out_padding_perc = float(a)/100
 			elif o in ('-q', '--quality'):
 				q = max(0, min(100, float(a)))/100.0
@@ -129,6 +130,21 @@ def parse_args():
 				options.layer_id = a
 			elif o in ('--join-regions', '-j'):
 				options.join_regions = True
+			elif o in ('-g', '--graticule'):
+				options.graticule = True
+			elif o == '--lon0':
+				options.lon0 = float(a)
+			elif o == '--lat0':
+				options.lat0 = float(a)
+			elif o in ('--proj'):
+				if a in proj.projections:
+					options.projection = proj.projections[a]
+				else:
+					print 'projection "%s" not found' % a
+					print 'available projections are:'
+					for pj in proj.projections:
+						print '  - %s' % pj
+					sys.exit(2)
 
 		options.applyDefaults()
 		
@@ -264,14 +280,15 @@ def get_bounding_box(iso3, shape, globe):
 	for j in range(0,len(parts)-1):
 		pts = shape.points[parts[j]:parts[j+1]]
 		if areas[j] >= max_area * min_area_percent:
-			latlon = []
+			lonlat = []
 			for k in range(0,len(pts)):
-				latlon.append((pts[k][1], pts[k][0]))
+				lonlat.append((pts[k][0], pts[k][1]))
 					
-			points = globe.plot(latlon)
-			for xy in points:
-				pt = Point(xy[0], xy[1])
-				bbox.update(pt)
+			mpoints = globe.plot(lonlat)
+			for points in mpoints:
+				for xy in points:
+					pt = Point(xy[0], xy[1])
+					bbox.update(pt)
 	return bbox
 
 
@@ -320,19 +337,24 @@ def _getPolygons(shp, id, globe, view, data=None):
 	parts = shp.parts[:]
 	parts.append(len(shp.points))
 	polys = []
+	errs = 0
 	for j in range(0,len(parts)-1):
 		pts = shp.points[parts[j]:parts[j+1]]
-		latlon = []
+		lonlat = []
 		for k in range(0,len(pts)):
-			latlon.append((pts[k][1], pts[k][0]))
-		poly_points = []
-		points = globe.plot(latlon)
-		if points == None: continue
-		for xy in points:
-			poly_points.append(view.project(Point(xy[0], xy[1])))
-		polygon = Polygon(id, poly_points, mode='point', data=data)
-		if polygon != None:
-			polys.append(polygon)
+			lonlat.append((pts[k][0],pts[k][1]))
+		
+		mpoints = globe.plot(lonlat)
+		if mpoints == None: continue
+		for points in mpoints:
+			poly_points = []
+			for xy in points:
+				if xy != None:
+					poly_points.append(view.project(Point(xy[0], xy[1])))
+				else: errs += 1
+			polygon = Polygon(id, poly_points, mode='point', data=data)
+			if polygon != None:
+				polys.append(polygon)
 	return polys
 
 def _remove_unicode(str):
@@ -514,11 +536,13 @@ def group_polygons(polygons, groupBy):
 	"""
 	groups = []
 	groupByAttr = {}
+	nogroup = 0
 	for poly in polygons:
 		if groupBy in poly.data:
 			attr = poly.data[groupBy]
 		else:
-			attr = 'na'
+			attr = 'na-%d'%nogroup
+			nogroup += 1
 		if attr in groupByAttr:
 			grp = groupByAttr[attr]
 		else:
@@ -539,24 +563,32 @@ def add_map_layer(svg, polygons, layerId, filter=None, useInt=True, groupBy='oid
 			if filter(poly):
 				filtered.append(poly)
 		polygons = filtered
+		
 	svgGroup = SVG('g', id=layerId)
 	svg.append(svgGroup)
 	
-	polyGroups = group_polygons(polygons, groupBy)
-	
-	for group in polyGroups:
-		path_str_arr = []
-		for poly in group:
-			path_str_arr.append(poly.svgPathString(useInt=useInt))
-		
-		svg_path = SVG('path', d=' '.join(path_str_arr))
-		poly = group[0]
-		svg_path['data-iso'] = poly.id
-		
-		for key in poly.data:
-			svg_path['data-'+key] = poly.data[key]
-				
-		svgGroup.append(svg_path)
+	if groupBy != None:
+		polyGroups = group_polygons(polygons, groupBy)
+		for group in polyGroups:
+			path_str_arr = []
+			for poly in group:
+				path_str_arr.append(poly.svgPathString(useInt=useInt))
+			
+			# todo: looks ugly
+			svg_path = SVG('path', d=' '.join(path_str_arr))
+			poly = group[0]
+			svg_path['data-iso'] = poly.id
+			
+			for key in poly.data:
+				svg_path['data-'+key] = poly.data[key]
+					
+			svgGroup.append(svg_path)
+	else:
+		for poly in polygons:			
+			svg_path = SVG('path', d=poly.svgPathString(useInt=useInt))
+			for key in poly.data:
+				svg_path['data-'+key] = poly.data[key]
+			svgGroup.append(svg_path)
 	
 
 def draw__map(country_iso3, svg, polygons, useInt=True, randomColors=False, labels=False):
@@ -676,7 +708,7 @@ def render_world_map():
 	"""
 	...
 	"""	
-	globe = proj.NaturalEarth()
+	globe = options.projection(lon0=options.lon0)
 	
 	bbox = Bounds2D()
 	
@@ -710,7 +742,7 @@ def render_world_map():
 	load_shapefiles()	
 	polygons = get_polygons_world(globe, view)
 	simplify_polygons(polygons)
-	add_map_layer(svg, polygons, 'countries')
+	add_map_layer(svg, polygons, 'countries', groupBy='iso')
 	save_or_display(svg, 'worldmap', options.out_file)
 
 
@@ -787,7 +819,7 @@ def render_country(iso3, outfile=None, regions=False):
 	shp = shprec.shape
 	
 	center_lon, center_lat = get_country_center(iso3, shp)
-	globe = proj.LAEA( center_lat , center_lon )
+	globe = proj.LAEA(lat0=center_lat , lon0=center_lon )
 	
 	bbox = get_bounding_box(iso3, shp, globe)
 	
@@ -809,7 +841,7 @@ def render_country(iso3, outfile=None, regions=False):
 	
 	simplify_polygons(polygons)
 	
-	polygons = clip_polygons(polygons, viewBox)
+	#polygons = clip_polygons(polygons, viewBox)
 	
 	add_map_layer(svg, polygons, iso3)
 			
@@ -996,8 +1028,7 @@ class Options(object):
 		self.context_simplification = None
 		self.verbose = False
 		self.target_countries = None
-		self.sea_layer = False
-		
+		self.sea_layer = False	
 		self.projection = None
 		
 		# options for add layer mode
@@ -1008,6 +1039,11 @@ class Options(object):
 	
 		# options for regions mode
 		self.join_regions = False
+		
+		# options for world mode
+		self.graticule = False
+		self.lat0 = 0.0
+		self.lon0 = 0.0
 	
 	def applyDefaults(self):
 	
@@ -1045,9 +1081,9 @@ class Options(object):
 
 		if self.projection is None:
 			if command == "world":
-				self.projection = "naturalearth"
+				self.projection = proj.NaturalEarth
 			else:
-				self.projection = "laea"
+				self.projection = proj.LAEA
 
 
 if __name__ == "__main__":

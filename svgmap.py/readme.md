@@ -41,7 +41,7 @@ Currently the the following *commands* are available
 
 ## Rendering world maps
 
-The command **world** renders a map of all countries in the world. The shapefiles come from the [Natural Earth project](http://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/). Currently, the [Natural Earth Projection](http://www.shadedrelief.com/NE_proj/)  is used, but more projections will be added in the future. 
+The command **world** renders a map of all countries in the world. The shapefiles come from the [Natural Earth project](http://www.naturalearthdata.com/downloads/10m-cultural-vectors/10m-admin-0-countries/). 
 
 For instance, this will output a world map into world.svg:
 
@@ -49,9 +49,17 @@ For instance, this will output a world map into world.svg:
 
 [![world map](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/world.svg.png)](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/world.svg)
 
+Also, you can now change the map projection and the center longitude:
+
+	svgmap.py world --sea --proj=robinson --lon0=-78
+
+![robinson map, centered on America](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/robinson-america.png)]
+
 Command-specific options are:
 
 * **--sea**, **-s** adds a sea background to the map
+* **--proj** specify the map projection that should be used
+* **--lon0** sets the center longitude
 
 ## Rendering country maps
 

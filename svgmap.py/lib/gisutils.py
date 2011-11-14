@@ -387,7 +387,9 @@ class Polygon(object):
 				ps += '%.3f,%.3f' % (pt.x, pt.y)
 		ps += 'Z' # close path
 		return ps
-
+		
+	def __str__(self):
+		return '<Polygon ('+str(len(self.points))+' points)>'
 
 	
 class View(object):
@@ -445,6 +447,9 @@ def clipToRect(polygon, bbox):
 	for i in range(0, len(out)):
 		outPolys.append(Polygon(polygon.id, out.contour(i), data=polygon.data))
 	return outPolys
+	
+	
+	
 	
 	
 def getPolygons(shp, id, proj, view):
