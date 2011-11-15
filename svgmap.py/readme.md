@@ -138,7 +138,7 @@ The **countries** command renders a map that contains multiple countries and it'
 
 	svgmap.py countries ESP,PRT,FRA,DEU,GBR -p5 --proj=lcc -s
 
-![some european countries](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/some-european-countries.png)
+![some european countries](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/some-eu-countries.png)
 
 ## Adding Shapefile Layers
 
