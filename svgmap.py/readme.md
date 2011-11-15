@@ -28,16 +28,19 @@ The following global options are avaiable
 * **--output**, **-o** filename for the SVG map, if not provided *tmp.svg* will be used.
 * **--padding**, **-p** how much spacing should be added around the map content
 * **--force-overwrite**, **-f** by default, existing files will not be overwritten in batch mode, unless you set this parameter
+* **--list-projections** prints a list of all available map projections
 
 
 ### Available Commands
 
 Currently the the following *commands* are available
 
-	svgmap.py world
-	svgmap.py country
-	svgmap.py regions
-	svgmap.py layer
+- world
+- country
+- regions
+- layer
+- countries
+
 
 ## Rendering world maps
 
@@ -128,6 +131,14 @@ Command specific parameters:
 * **--name** define the focus region by name (will try to match minor spelling differences)
 * **--context** adds surrounding regions *and* countries
 * **--region-context** adds surrounding regions (no countries here)
+
+## Mapping multiple countries in one map
+
+The **countries** command renders a map that contains multiple countries and it's surrounding context. The following renders a map that (at least) contains Spain, Portugal, France, Germany and the United Kingdom, and the Lambert Conformal Conical projection (lcc) will be used.
+
+	svgmap.py countries ESP,PRT,FRA,DEU,GBR -p5 --proj=lcc -s
+
+![some european countries](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/some-european-countries.png)
 
 ## Adding Shapefile Layers
 

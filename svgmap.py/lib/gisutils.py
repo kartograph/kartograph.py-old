@@ -324,6 +324,10 @@ class Bounds2D(object):
 		
 	def __str__(self):
 		return '[%.2f, %.2f, %.2f, %.2f]' % (self.left, self.top, self.width, self.height)
+		
+	def join(self, bbox):
+		self.update(Point(bbox.left, bbox.top))
+		self.update(Point(bbox.right, bbox.bottom))
 
 	
 class Polygon(object):

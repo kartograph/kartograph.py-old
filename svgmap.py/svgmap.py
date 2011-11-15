@@ -44,6 +44,14 @@ def main():
 		render_region()
 	elif command == "layer":
 		add_shapefile_layer()
+	elif command == "countries":
+		render_countries()
+
+def list_projections():
+	print 'available projections are:'
+	for pj in proj.projections:
+		print '  - %s' % pj
+	print
 
 def parse_args():
 	global command, options, math
@@ -56,24 +64,35 @@ def parse_args():
 	
 	command = sys.argv[1]
 	
-	if command not in ('country','regions','world','layer','region'):
+	if command not in ('world','country','regions','layer','region','countries'):
 		usage()
 		sys.exit(2)
 	
 	# parse options
 	# global options
 	opt_str = "o:w:h:r:p:q:sfv"
-	long_opt = ['output=', 'width=', 'height=', 'ratio=', 'padding=', 'quality=', 'sea', 'force-overwrite', 'context-quality=', 'verbose', 'proj=']
+	long_opt = ['output=', 'width=', 'height=', 'ratio=', 'padding=', 'quality=', 'sea', 'force-overwrite', 'context-quality=', 'verbose', 'proj=','list-projections']
 
 	if command == "world":
 		long_opt += ['graticule','lon0=','lat0=']
 		opt_str += 'g'
 		cmd_args = sys.argv[2:]
+		
+	if command == "countries":
+		if len(sys.argv) < 3:
+			print '\nError: you must define the countries to be rendered'
+			print
+			sys.exit(2)
+		long_opt += ['graticule','lon0=','lat0=']
+		opt_str += 'g'
+		options.target_countries = sys.argv[2].split(',')
+		cmd_args = sys.argv[3:]
+		
 	
 	if command in ('regions', 'country'):
 		if len(sys.argv) < 3:
 			print '\nError: you must define the country to be rendered, e.g.\n\n   '+os.path.basename(sys.argv[0])+' '+command+' USA'
-			print '   '+os.path.basename(sys.argv[0])+' '+command+' USA,CAN,MEX\n   '+os.path.basename(sys.argv[0])+' '+command+' all'
+			print '   '+os.path.basename(sys.argv[0])+' '+command+' USA,DEU,CHN\n   '+os.path.basename(sys.argv[0])+' '+command+' all'
 			print
 			sys.exit(2)
 		else:
@@ -134,17 +153,20 @@ def parse_args():
 				options.graticule = True
 			elif o == '--lon0':
 				options.lon0 = float(a)
+				options.force_lon0 = True
 			elif o == '--lat0':
 				options.lat0 = float(a)
+				options.force_lat0 = True
 			elif o in ('--proj'):
 				if a in proj.projections:
 					options.projection = proj.projections[a]
 				else:
 					print 'projection "%s" not found' % a
-					print 'available projections are:'
-					for pj in proj.projections:
-						print '  - %s' % pj
+					list_projections()
 					sys.exit(2)
+			elif o == '--list-projections':
+				list_projections()
+				sys.exit(2)
 
 		options.applyDefaults()
 		
@@ -165,9 +187,10 @@ country_min_area['JPN'] = .1
 country_min_area['AUS'] = .01
 country_min_area['CAN'] = .05
 country_min_area['ALA'] = .1
+country_min_area['FRA'] = .2
 country_min_area['DNK'] = .1
 country_min_area['ITA'] = .1
-country_min_area['GBR'] = .01
+country_min_area['GBR'] = .165
 
 
 custom_country_center = {}
@@ -191,12 +214,12 @@ def load_shapefiles():
 	region_sf_src = options.data_path + 'shp/ne_10m_admin_1_states_provinces_shp'
 	join_csv_src = options.data_path + 'region_joins.csv'
 
-	print "loading country shapefile"
+	if options.verbose: print "loading country shapefile"
 	
 	country_sf = shapefile.Reader(country_sf_src)
 	country_recs = country_sf.records()
 	
-	if command != "world" and not options.add_context:
+	if command not in ('world','countries') and not options.add_context:
 		country_shapes = None
 	else:
 		country_shapes = country_sf.shapeRecords()
@@ -285,6 +308,7 @@ def get_bounding_box(iso3, shape, globe):
 				lonlat.append((pts[k][0], pts[k][1]))
 					
 			mpoints = globe.plot(lonlat)
+			if mpoints == None: continue
 			for points in mpoints:
 				for xy in points:
 					pt = Point(xy[0], xy[1])
@@ -439,6 +463,22 @@ def get_polygons_country_context(country_iso3, shprec, viewBox, view, globe, reg
 	return polygons
 
 
+def get_polygons_countries(viewBox, view, globe, regions=False):
+	"""
+	returns a list of gisutils.Polygon that will be visible in the map
+	"""
+	polygons = []
+	
+	for i in range(len(country_recs)):
+		iso3 = country_recs[i][29].upper()
+		shp = country_shapes[i].shape
+		polys = _getPolygons(shp, iso3, globe, view, data=_get_polygon_data(country_recs[i]))
+		
+		for poly in polys:
+			if poly.bbox.intersects(viewBox):
+				polygons.append(poly)			
+		
+	return polygons
 
 
 
@@ -688,16 +728,35 @@ def get_view(bbox):
 	return View(bbox, w, h-1, padding=options.out_padding)
 	
 
-def get_country_center(iso3, shp):
+def get_country_center(shp, iso3=None):
 	"""
 	either computes the center of a shape or uses customized center coordinates
 	"""
 	global custom_country_center
 	
-	if iso3 in custom_country_center:
+	if iso3 != None and iso3 in custom_country_center:
 		return custom_country_center[iso3]
 	else:
 		return shape_center(shp)
+
+
+
+def get_polygons_world(globe, view):
+	"""
+	returns a list of gisutils.Polygon that will be visible in the map
+	"""
+	polygons = []
+		
+	for i in range(len(country_recs)):
+		shp = country_shapes[i].shape
+		iso3 = country_recs[i][29]
+		polys = _getPolygons(shp, iso3, globe, view, data=_get_polygon_data(country_recs[i]))
+			
+		for poly in polys:
+			polygons.append(poly)			
+	
+	return polygons
+
 
 
 """ -----------------
@@ -747,22 +806,6 @@ def render_world_map():
 
 
 
-
-def get_polygons_world(globe, view):
-	"""
-	returns a list of gisutils.Polygon that will be visible in the map
-	"""
-	polygons = []
-		
-	for i in range(len(country_recs)):
-		shp = country_shapes[i].shape
-		iso3 = country_recs[i][29]
-		polys = _getPolygons(shp, iso3, globe, view, data=_get_polygon_data(country_recs[i]))
-			
-		for poly in polys:
-			polygons.append(poly)			
-	
-	return polygons
 
 
 def render_regions_or_country():
@@ -818,7 +861,7 @@ def render_country(iso3, outfile=None, regions=False):
 	rec = shprec.record
 	shp = shprec.shape
 	
-	center_lon, center_lat = get_country_center(iso3, shp)
+	center_lon, center_lat = get_country_center(shp, iso3=iso3)
 	globe = proj.LAEA(lat0=center_lat , lon0=center_lon )
 	
 	bbox = get_bounding_box(iso3, shp, globe)
@@ -859,7 +902,7 @@ def render_country_and_context(iso3, outfile=None, regions=False):
 	shp = shprec.shape
 
 	# initialize projection, use center lat/lng from shape record as center
-	center_lon, center_lat = get_country_center(iso3, shp)
+	center_lon, center_lat = get_country_center(shp, iso3=iso3)
 	
 	globe = proj.LAEA( center_lat , center_lon )
 
@@ -992,7 +1035,66 @@ def add_shapefile_layer():
 	save_or_display(svg, "", options.out_file)
 	
 
+def render_countries(outfile=None):
+	"""
+	renders a single map that contains at least the specified countries
+	in most cases, the map will also contain other countries
+	"""
+	# get shapes for the selected countries
+	load_shapefiles()
+	targets = []
+	for iso3 in options.target_countries:
+		shprec = get_country_shape(iso3)
+		targets.append(shprec)
+		
+	if not options.force_lat0 or not options.force_lon0:
+		# get shape centers and use mean center as map center
+		cbox = Bounds2D()
+		for tgt in targets:
+			lon0, lat0 = get_country_center(tgt.shape)
+			cbox.update(Point(lon0, lat0))
+		if not options.force_lon0: options.lon0 = cbox.left + cbox.width * .5
+		if not options.force_lat0: options.lat0 = cbox.top + cbox.height * .5
+		if options.verbose:
+			print 'computed map center at %f,%f' %(options.lon0, options.lat0)
+		
+	# initialize map projection
+	globe = options.projection(lon0=options.lon0, lat0=options.lat0)
+	
+	# project countries to get bounding boxes
+	# and compute total bounding box and view
+	bbox = Bounds2D()
+	for i in range(len(targets)):
+		iso = options.target_countries[i]
+		shp = targets[i].shape
+		cbox = get_bounding_box(iso3, shp, globe)
+		bbox.join(cbox)
+	view = get_view(bbox)
+	viewBox = Bounds2D(width=view.width, height=view.height)	
+
+	# init svg
+	svg = init_svg_canvas(view, bbox, globe, options.lat0, options.lon0)
+	
+	# add sea background
+	if options.sea_layer:
+		svg.append(SVG('g', SVG('rect', x=0, y=0, width=view.width, height=view.height, style='stroke:none;fill:#d0ddf0'), id="bg"))
+	
+	# render every country that intersects the view
+	polygons = get_polygons_countries(viewBox, view, globe)
+	simplify_polygons(polygons)
+	polygons = clip_polygons(polygons, viewBox)
+	add_map_layer(svg, polygons, 'countries', groupBy='iso')
+	
+	# save and exit
+	save_or_display(svg, '-'.join(options.target_countries), outfile)
+
+
+
+
 def save_or_display(svg, iso3, outfile):
+	"""
+	this finally saves the SVG map or displays it in firefox 
+	"""
 	global options
 	
 	if outfile != None or (options.target_countries != None and options.target_countries[0] == 'all'):
@@ -1044,6 +1146,8 @@ class Options(object):
 		self.graticule = False
 		self.lat0 = 0.0
 		self.lon0 = 0.0
+		self.force_lat0 = False
+		self.force_lon0 = False
 	
 	def applyDefaults(self):
 	
