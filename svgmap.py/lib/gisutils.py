@@ -219,6 +219,9 @@ class Point(object):
 			return False
 		return True
 		
+	def __str__(self):
+		return '%f,%f' % (self.x, self.y)
+		
 
 		
 def smartBounds(shape, proj, thresh=0.25):
@@ -412,9 +415,15 @@ class View(object):
 		bbox = self.bbox
 		h = self.height
 		w = self.width
-		x = (pt.x - bbox.left) * s + (w - bbox.width * s) * .5
-		y = (pt.y - bbox.top) * s + (h - bbox.height * s) * .5
-		return Point(x, y)
+		if isinstance(pt, Point):
+			px = pt.x
+			py = pt.y
+		else:
+			px = pt[0]
+			py = pt[1]
+		x = (px - bbox.left) * s + (w - bbox.width * s) * .5
+		y = (py - bbox.top) * s + (h - bbox.height * s) * .5
+		return ((x,y), Point(x, y))[isinstance(pt, Point)]
 		
 	def __str__(self):
 		return 'View(w=%f, h=%f, pad=%f, scale=%f, bbox=%s)' % (self.width, self.height, self.padding, self.scale, self.bbox)
@@ -554,3 +563,6 @@ def is_clockwise(pts):
 			x2, y2 = pts[i+1]
 		s += (x2-x1) * (y2+y1)
 	return s >= 0
+
+
+

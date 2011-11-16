@@ -70,12 +70,12 @@ def parse_args():
 	
 	# parse options
 	# global options
-	opt_str = "o:w:h:r:p:q:sfv"
-	long_opt = ['output=', 'width=', 'height=', 'ratio=', 'padding=', 'quality=', 'sea', 'force-overwrite', 'context-quality=', 'verbose', 'proj=','list-projections']
+	opt_str = "o:w:h:r:p:q:sfvg:"
+	long_opt = ['output=', 'width=', 'height=', 'ratio=', 'padding=', 'quality=', 'sea', 'force-overwrite', 'context-quality=', 'verbose', 'proj=','list-projections','graticule=','round-coordinates']
 
 	if command == "world":
-		long_opt += ['graticule','lon0=','lat0=']
-		opt_str += 'g'
+		long_opt += ['lon0=','lat0=','lat1=','lat2=']
+		opt_str += ''
 		cmd_args = sys.argv[2:]
 		
 	if command == "countries":
@@ -83,7 +83,7 @@ def parse_args():
 			print '\nError: you must define the countries to be rendered'
 			print
 			sys.exit(2)
-		long_opt += ['graticule','lon0=','lat0=']
+		long_opt += ['graticule','lon0=','lat0=','lat1=','lat2=']
 		opt_str += 'g'
 		options.target_countries = sys.argv[2].split(',')
 		cmd_args = sys.argv[3:]
@@ -151,12 +151,23 @@ def parse_args():
 				options.join_regions = True
 			elif o in ('-g', '--graticule'):
 				options.graticule = True
+				options.grat_step = int(a)
+			elif o == '--round-coordinates':
+				options.round_coordinates = True
 			elif o == '--lon0':
 				options.lon0 = float(a)
 				options.force_lon0 = True
 			elif o == '--lat0':
 				options.lat0 = float(a)
 				options.force_lat0 = True
+			elif o == '--lat1':
+				options.lat1 = float(a)
+				options.force_lat1 = True
+			elif o == '--lat2':
+				options.lat2 = float(a)
+				options.force_lat2 = True
+			elif o in ('--graticule', '-g'):
+				options.graticule = True
 			elif o in ('--proj'):
 				if a in proj.projections:
 					options.projection = proj.projections[a]
@@ -191,6 +202,7 @@ country_min_area['FRA'] = .2
 country_min_area['DNK'] = .1
 country_min_area['ITA'] = .1
 country_min_area['GBR'] = .165
+country_min_area['ESP'] = .165
 
 
 custom_country_center = {}
@@ -300,19 +312,32 @@ def get_bounding_box(iso3, shape, globe):
 	
 	bbox = Bounds2D()
 	
+	kept = 0
+	skipped = 0
+	
 	for j in range(0,len(parts)-1):
 		pts = shape.points[parts[j]:parts[j+1]]
 		if areas[j] >= max_area * min_area_percent:
+			kept += 1
 			lonlat = []
 			for k in range(0,len(pts)):
 				lonlat.append((pts[k][0], pts[k][1]))
-					
+			
 			mpoints = globe.plot(lonlat)
+			
 			if mpoints == None: continue
 			for points in mpoints:
 				for xy in points:
 					pt = Point(xy[0], xy[1])
 					bbox.update(pt)
+		else:
+			skipped += 1
+			if options.verbose:
+				#print iso3,'skipping shape part',j,'because area is too small'
+				#print iso3, min_area_percent, round(areas[j]), round(max_area)
+				pass
+	if options.verbose:
+		print iso3, kept, 'shapes kept,', skipped,'shapes skipped'
 	return bbox
 
 
@@ -322,14 +347,17 @@ def init_svg_canvas(view, bbox, globe, center_lat, center_lon):
 	"""
 	from svgfig import canvas, SVG
 	
-	global options
-	
 	w = view.width
 	h = view.height+2
 	
-	svg = canvas(width='%dpx' % w, height='%dpx' % h, viewBox='0 0 %d %d' % (w, h), enable_background='new 0 0 %d %d' % (w, h), style='stroke-width:1px; stroke-linejoin: round; stroke:#444; fill:white;')
+	svg = canvas(width='%dpx' % w, height='%dpx' % h, viewBox='0 0 %d %d' % (w, h), enable_background='new 0 0 %d %d' % (w, h), style='stroke-width:0.7pt; stroke-linejoin: round; stroke:#444; fill:white;')
 
-	svg.append(SVG('defs', SVG('style', 'path { fill-rule: evenodd; }\n#context path { fill: #eee; stroke: #bbb; }', type='text/css')))
+	css = 'path { fill-rule: evenodd; }\n#context path { fill: #eee; stroke: #bbb; } '
+	
+	if options.graticule:
+		css += '#graticule path { fill: none; stroke-width:0.25pt;  } #graticule .equator { stroke-width: 0.5pt } '
+
+	svg.append(SVG('defs', SVG('style', css, type='text/css')))
 
 	meta = SVG('metadata')
 	
@@ -593,7 +621,7 @@ def group_polygons(polygons, groupBy):
 	
 
 
-def add_map_layer(svg, polygons, layerId, filter=None, useInt=True, groupBy='oid'):
+def add_map_layer(svg, polygons, layerId, filter=None, groupBy='oid'):
 	"""
 	add a layer to the map
 	"""
@@ -612,7 +640,7 @@ def add_map_layer(svg, polygons, layerId, filter=None, useInt=True, groupBy='oid
 		for group in polyGroups:
 			path_str_arr = []
 			for poly in group:
-				path_str_arr.append(poly.svgPathString(useInt=useInt))
+				path_str_arr.append(poly.svgPathString(useInt=options.round_coordinates))
 			
 			# todo: looks ugly
 			svg_path = SVG('path', d=' '.join(path_str_arr))
@@ -625,65 +653,86 @@ def add_map_layer(svg, polygons, layerId, filter=None, useInt=True, groupBy='oid
 			svgGroup.append(svg_path)
 	else:
 		for poly in polygons:			
-			svg_path = SVG('path', d=poly.svgPathString(useInt=useInt))
+			svg_path = SVG('path', d=poly.svgPathString(useInt=options.round_coordinates))
 			for key in poly.data:
 				svg_path['data-'+key] = poly.data[key]
 			svgGroup.append(svg_path)
 	
 
-def draw__map(country_iso3, svg, polygons, useInt=True, randomColors=False, labels=False):
+def add_sea_layer(svg, globe, view, viewbox):
+	sea = globe.sea_shape()
+	sea_pts = []
+	for s in sea:
+		x,y = view.project(s)	
+		sea_pts.append(Point(x,y))
+		
+	sea_polys = clip_polygons([Polygon('sea', sea_pts, mode='point')], viewbox)	
+	g = SVG('g', id='sea')
+	svg.append(g)
+	for sea in sea_polys:
+		g.append(SVG('path', d=sea.svgPathString(useInt=False), style='fill:#d0ddf0', id="sea"))
+
+
+def add_graticule(svg, globe, view, viewbox):
 	"""
-	DEPRECATED, use add_map_layer instead
-	add country polygons to SVG
 	"""
-	from svgfig import SVG
-	from gisutils import polygon_center
-	
-	polyGroups = group_polygons(polygons)
-	
-	for group in polyGroups:
-		path_str_arr = []
-		for poly in group:
-			path_str_arr.append(poly.svgPathString(useInt=useInt))
-		
-		svg_path = SVG('path', d=' '.join(path_str_arr))
-		poly = group[0]
-		
-		if poly.id != country_iso3:
-			svg_polygon['class'] = 'n'
-		
-		svg_polygon['id'] = poly.id
-		
-		if 'subid' in poly.data and poly.data['subid'] != "":
-			svg_polygon['subid'] = poly.data['subid']
-		if 'objectid' in poly.data and poly.data['objectid'] != "":
-			svg_polygon['oid'] = poly.data['objectid']
-		
-		svg.append(svg_polygon)
-		
-		known_ids = []
-		if randomColors:
-			import random
-			rand_colors = []
-		
-		if labels:
-			center = polygon_center(poly)
-			l = poly.id
-			if 'subid' in poly.data: 
-				l=poly.data['subid'][3:]
-			if randomColors:
-				if l not in known_ids:
-					known_ids.append(l)
-					color = 'HSL('+str(random.randrange(0,360))+',90%,90%)'
-					rand_colors.append(color)
+	from lib.clipping import Line
+	g = SVG('g', id='graticule')
+	svg.append(g)
+	for lat in range(0,90, options.grat_step):
+		lats = ([lat, -lat], [0])[lat == 0]
+		for lat_ in lats:
+			pts = []
+			lines = []
+			for lon in range(0,361,1):
+				lon_ = lon-180
+				if globe._visible(lon_, lat_):
+					x,y = view.project(globe.project(lon_, lat_))
+					pts.append(Point(x,y))
 				else:
-					color = rand_colors[known_ids.index(l)]
-				svg_polygon['fill'] = color
-			text = SVG('text', l, x=center.x, y=center.y, text_anchor='middle', alignment_baseline='central', style="stroke:none;font-size:9px;fill:black;font-family;Lato;font-weight:400;")
-			svg.append(text)	
-
-
+					if len(pts) > 1:
+						line = Line(pts)
+						pts = []
+						lines += line & viewbox
+			
+			if len(pts) > 1:
+				line = Line(pts)
+				pts = []
+				lines += line & viewbox
+				
+			for line in lines:
+				path = SVG('path', d=line.svgPathString(), data_lat=lat_)
+				if lat == 0:
+					path['class'] = 'equator'
+				g.append(path)
 	
+	for lon in range(0,181, options.grat_step):
+		lons = ([lon, -lon], [lon])[lon == 0 or lon == 180]
+		for lon_ in lons:
+			pts = []
+			lines = []
+			for lat in range(0,181,1):
+				lat_ = lat-90
+				if globe._visible(lon_, lat_):
+					x,y = view.project(globe.project(lon_, lat_))
+					pts.append(Point(x,y))
+				else:
+					if len(pts) > 1:
+						line = Line(pts)
+						pts = []
+						lines += line & viewbox
+			
+			if len(pts) > 1:
+				line = Line(pts)
+				pts = []
+				lines += line & viewbox
+				
+			for line in lines:
+				path = SVG('path', d=line.svgPathString(), data_lon=options.lon0 - lon_)
+				g.append(path)
+				
+				
+				
 def draw_locations(svg, globe, view, country_iso3, iso3, iso2, locations, radius=1.3, fills=None):
 	"""
 	for debugging purposes only, this functions draws geoip locations on the map
@@ -699,13 +748,14 @@ def draw_locations(svg, globe, view, country_iso3, iso3, iso2, locations, radius
 			if loc[1] == iso2 and loc[2] in locations:
 				lat = float(loc[5])
 				lon = float(loc[6])
-				x,y = globe.project(lat, lon)
+				x,y = globe.project(lon, lat)
 				pt = view.project(Point(x,y))
 				if loc[2] in fills:
 					color = fills[loc[2]]
 				else:
 					color = '#c00'
 				svg.append(SVG('circle', cx=pt.x, cy=pt.y, r=str(radius), fill=color, stroke='none', opacity='.8'))
+	
 	
 def get_view(bbox):
 	"""
@@ -767,36 +817,22 @@ def render_world_map():
 	"""
 	...
 	"""	
-	globe = options.projection(lon0=options.lon0)
+	globe = options.projection(lon0=options.lon0, lat0=options.lat0)
 	
-	bbox = Bounds2D()
+	#bbox = Bounds2D()
+	bbox = globe.world_bounds()
 	
-	for lat,lon in [(0,-180),(0,180),(-90,0),(90,0)]:
-		x,y = globe.project(lat,lon)
-		bbox.update(Point(x,y))
-		
 	view = get_view(bbox)	
+	viewbox = Bounds2D(width=view.width, height=view.height)
 	
 	lat0, lon0 = (0.0, 0.0)
 	svg = init_svg_canvas(view, bbox, globe, lat0, lon0)
 
 	if options.sea_layer:
-		sea = []
-		for lat in range(-90,90): sea.append((-180,lat))
-		for lon in range(-180,180): sea.append((lon, 90))
-		for lat in range(-90,90): sea.append((180,lat*-1))
-		for lon in range(-180,180): sea.append((lon*-1, -90))
-		
-		sea_pts = []
-		
-		for s in sea:
-			lon, lat = s
-			x,y = globe.project(lat, lon)
-			pt = view.project(Point(x,y))	
-			sea_pts.append(pt)
-			
-		sea = Polygon('sea', sea_pts, mode='point')	
-		svg.append(SVG('path', d=sea.svgPathString(useInt=False), style='fill:#d0ddf0', id="sea"))
+		add_sea_layer(svg, globe, view, viewbox)
+	
+	if options.graticule:
+		add_graticule(svg, globe, view, viewbox)
 	
 	load_shapefiles()	
 	polygons = get_polygons_world(globe, view)
@@ -953,10 +989,10 @@ def add_shapefile_layer():
 	svg = svgfig.load(options.svg_src)
 	
 	b = map(float, svg[1][0][2][0].split(','))
+	bbox = Bounds2D(left=b[0], top=b[1], width=b[2], height=b[3])
 	pj = svg[1][0][0][0]
 	pd = float(svg[1][0][3][0])
 	clat, clon = map(float, svg[1][0][1][0].split(','))
-	bbox = Bounds2D(left=b[0], top=b[1], width=b[2], height=b[3])
 	vh = float(svg['height'][:-2])
 	vw = float(svg['width'][:-2])
 	
@@ -1049,26 +1085,35 @@ def render_countries(outfile=None):
 		
 	if not options.force_lat0 or not options.force_lon0:
 		# get shape centers and use mean center as map center
-		cbox = Bounds2D()
-		for tgt in targets:
-			lon0, lat0 = get_country_center(tgt.shape)
-			cbox.update(Point(lon0, lat0))
-		if not options.force_lon0: options.lon0 = cbox.left + cbox.width * .5
-		if not options.force_lat0: options.lat0 = cbox.top + cbox.height * .5
-		if options.verbose:
-			print 'computed map center at %f,%f' %(options.lon0, options.lat0)
+		clons = []
+		clats = []
+		for i in range(len(targets)):
+			tgt = targets[i]
+			iso3 = options.target_countries[i]
+			lon0, lat0 = get_country_center(tgt.shape, iso3=iso3)
+			clons.append(lon0)
+			clats.append(lat0)
 		
+		if not options.force_lon0: options.lon0 = min(clons) + (max(clons) - min(clons)) * .5
+		if not options.force_lat0: options.lat0 = min(clats) + (max(clats) - min(clats)) * .5
+		if options.verbose:
+			print 'computed map center at %f,%f' % (options.lon0, options.lat0)
+				
 	# initialize map projection
 	globe = options.projection(lon0=options.lon0, lat0=options.lat0)
+	
+	if isinstance(globe, proj.Conic):
+		globe = options.projection(lon0=options.lon0, lat0=options.lat0, lat1=options.lat1, lat2=options.lat2)
 	
 	# project countries to get bounding boxes
 	# and compute total bounding box and view
 	bbox = Bounds2D()
 	for i in range(len(targets)):
-		iso = options.target_countries[i]
+		iso3 = options.target_countries[i]
 		shp = targets[i].shape
 		cbox = get_bounding_box(iso3, shp, globe)
 		bbox.join(cbox)
+			
 	view = get_view(bbox)
 	viewBox = Bounds2D(width=view.width, height=view.height)	
 
@@ -1077,7 +1122,11 @@ def render_countries(outfile=None):
 	
 	# add sea background
 	if options.sea_layer:
-		svg.append(SVG('g', SVG('rect', x=0, y=0, width=view.width, height=view.height, style='stroke:none;fill:#d0ddf0'), id="bg"))
+		add_sea_layer(svg, globe, view, viewBox)
+	
+	if options.graticule:
+		add_graticule(svg, globe, view, viewBox)
+	
 	
 	# render every country that intersects the view
 	polygons = get_polygons_countries(viewBox, view, globe)
@@ -1127,6 +1176,7 @@ class Options(object):
 		self.shp_country_id_col = 2
 		self.force_overwrite = False
 		self.simplification = 2
+		self.round_coordinates = False
 		self.context_simplification = None
 		self.verbose = False
 		self.target_countries = None
@@ -1143,11 +1193,19 @@ class Options(object):
 		self.join_regions = False
 		
 		# options for world mode
-		self.graticule = False
 		self.lat0 = 0.0
 		self.lon0 = 0.0
+		self.lat1 = 0.0
+		self.lat2 = 0.0
 		self.force_lat0 = False
 		self.force_lon0 = False
+		self.force_lat1 = False
+		self.force_lat2 = False
+	
+		# graticule options
+		self.graticule = False
+		self.grat_step = 15
+		
 	
 	def applyDefaults(self):
 	
