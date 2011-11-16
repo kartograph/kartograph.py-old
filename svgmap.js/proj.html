@@ -1,0 +1,51 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>proj.js test</title>
+	<script src="js/proj.js"></script>
+	<script>
+		console.log("foo");
+
+	window.onload = function() {
+
+		console.log("foo");
+		var test = 'lonlat',
+	
+		P = new proj[test](),
+
+		lon, lat, i,
+
+		grat = 15,
+
+		sea = [],
+
+		canvas = document.getElementById("myCanvas"),
+	
+		context = canvas.getContext("2d");
+
+		for (lon=0;lon<360;lon++) sea.push([lon-180,90]);
+		for (lat=0;lat<180;lat++) sea.push([180, 90-lat])
+		for (lon=0;lon<360;lon++) sea.push([180-lon,-90]);
+		for (lat=0;lat<180;lat++) sea.push([-180, lat-90])
+
+		console.log(P);
+
+		for (i=0;i<sea.length-1;i++) {
+			lon = sea[i][0]; lat = sea[i][1];
+			xy = P.project(lon, lat);
+			if (i==0) context.moveTo(xy[0], xy[1]);
+			else context.lineTo(xy[0], xy[1]);
+		}
+		context.stroke();
+
+		
+	};
+	
+	</script>
+</head>
+<body>
+	<canvas id="myCanvas" width="1100" height="800">
+
+	</canvas>
+</body>
+</html>
