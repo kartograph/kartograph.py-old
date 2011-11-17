@@ -259,8 +259,8 @@ class NaturalEarth(PseudoCylindrical):
 		lpphi = rad(lat*-1)
 		phi2 = lpphi * lpphi
 		phi4 = phi2 * phi2
-		x = lplam * (self.A0 + phi2 * (self.A1 + phi2 * (self.A2 + phi4 * phi2 * (self.A3 + phi2 * self.A4)))) * 1000
-		y = lpphi * (self.B0 + phi2 * (self.B1 + phi4 * (self.B2 + self.B3 * phi2 + self.B4 * phi4))) * 1000
+		x = lplam * (self.A0 + phi2 * (self.A1 + phi2 * (self.A2 + phi4 * phi2 * (self.A3 + phi2 * self.A4)))) * 180 + 500
+		y = lpphi * (self.B0 + phi2 * (self.B1 + phi4 * (self.B2 + self.B3 * phi2 + self.B4 * phi4))) * 180 + 270
 		return (x,y)
 
 projections['naturalearth'] = NaturalEarth

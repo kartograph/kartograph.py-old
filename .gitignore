@@ -5,3 +5,4 @@ data/shp/*.shp
 data/shp/*.dbf
 data/shp/*.prj
 data/shp/*.shx
+tmp.svg
