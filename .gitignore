@@ -1,3 +1,7 @@
 .DS_Store
 svgmap.py/tmp.svg
 svgmap.py/tmp/
+data/shp/*.shp
+data/shp/*.dbf
+data/shp/*.prj
+data/shp/*.shx
