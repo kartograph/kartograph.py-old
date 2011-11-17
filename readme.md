@@ -17,6 +17,8 @@ The following Python libraries are required:
 * [Polygon](http://pypi.python.org/pypi/Polygon/1.17)
 * [svgfig](http://code.google.com/p/svgfig/)
 
+Also you need to download Natural Earth shapefiles following these [download instructions](https://github.com/svgmap/svgmap.py/tree/master/data)
+
 ### Global Options
 
 The following global options are avaiable
@@ -50,13 +52,13 @@ For instance, this will output a world map into world.svg:
 
 	svgmap.py world --sea --width 600 --o world.svg
 
-[![world map](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/world.svg.png)](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/world.svg)
+[![world map](https://github.com/svgmap/svgmap.py/raw/master/doc/world.svg.png)](https://github.com/svgmap/svgmap.py/raw/master/doc/world.svg)
 
 Also, you can now change the map projection and the center longitude:
 
 	svgmap.py world --sea --proj=robinson --lon0=-78
 
-![robinson map, centered on America](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/robinson-america.png)]
+![robinson map, centered on America](https://github.com/svgmap/svgmap.py/raw/master/doc/robinson-america.png)]
 
 Command-specific options are:
 
@@ -76,13 +78,13 @@ To render a map of Germany you would run
 
 	svgmap.py country DEU --height 300 -o DEU.svg
 
-![Map of Germany](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/DEU.svg.png)
+![Map of Germany](https://github.com/svgmap/svgmap.py/raw/master/doc/DEU.svg.png)
 
 In the next example, the surrounding countries are added using the *--context* parameter. Also, the padding is set to 10%  and the output ratio is set to 2 (width is two times height):
 
 	svgmap.py country DEU --h 300 --context --sea --padding 10 --ratio 2 -o DEU-context.svg
 
-![Region map of Germany](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/DEU-context.svg.png)
+![Region map of Germany](https://github.com/svgmap/svgmap.py/raw/master/doc/DEU-context.svg.png)
 
 You can render several country maps at once by providing a comma-separated list of ISO-codes. In this case, only the directory name of the *--output* parameter will be used and the country maps are saved under their iso3 codes. 
 
@@ -104,13 +106,13 @@ The **regions** (plural!) command works basically just like the *country* comman
 
 	svgmap.py regions FRA --h 300 -o FRA-regions.svg
 
-![Region map of France](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/FRA-regions.svg.png)
+![Region map of France](https://github.com/svgmap/svgmap.py/raw/master/doc/FRA-regions.svg.png)
 
 For instance, you can add context the same way as in country maps.
 
 	svgmap.py regions FRA --h 300 --context --sea --padding 10 --ratio 2 -o FRA-regions-context.svg
 
-![Region map of France with context](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/FRA-regions-context.svg.png)
+![Region map of France with context](https://github.com/svgmap/svgmap.py/raw/master/doc/FRA-regions-context.svg.png)
 
 Command specific parameters:
 
@@ -138,7 +140,7 @@ The **countries** command renders a map that contains multiple countries and it'
 
 	svgmap.py countries ESP,PRT,FRA,DEU,GBR -p5 --proj=lcc -s
 
-![some european countries](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/some-eu-countries.png)
+![some european countries](https://github.com/svgmap/svgmap.py/raw/master/doc/some-eu-countries.png)
 
 ## Adding Shapefile Layers
 
@@ -148,26 +150,26 @@ At first we create a country map of Brazil with some context.
 
 	svgmap.py country BRA --context --height 300 -p6 -s -o BRA.svg
 
-![Map of Brazil with context](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/BRA.svg.png)
+![Map of Brazil with context](https://github.com/svgmap/svgmap.py/raw/master/doc/BRA.svg.png)
 
 Now we add a new layer for current forests, taken from [Global Forest Watch](http://ims.missouri.edu/gfwmetadataexplorer/).
 
 	svgmap.py layer BRA.svg globalforestwatch/w_curr.shp -o BRA-forests.svg
 
-![Map of Brazil with context](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/BRA-forests.svg.png)
+![Map of Brazil with context](https://github.com/svgmap/svgmap.py/raw/master/doc/BRA-forests.svg.png)
 
 If we want just the forests in Brazil, we can use the *--crop-to-layer* parameter. We have to define the layer id to which the shapefile should be cropped to (in this case, the layer id is "BRA"):
 
 	svgmap.py layer BRA.svg globalforestwatch/w_curr.shp --crop-to-layer=BRA -o BRA-forests-cropped.svg
 
-![Map of Brazil with context](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/BRA-forests-cropped.svg.png)
+![Map of Brazil with context](https://github.com/svgmap/svgmap.py/raw/master/doc/BRA-forests-cropped.svg.png)
 
 Here's another example: After rendering a country map of the United States we can add a layer for all counties spapes, taken from the [Census 2000 shapefile](http://www.census.gov/geo/www/cob/co2000.html#shp).
 
 	svgmap.py country USA -o USA.svg
 	svgmap.py layer USA.svg census2000/co99_d00.shp -o USA-counties.svg
 
-![United States with all counties](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/USA2.svg.png)
+![United States with all counties](https://github.com/svgmap/svgmap.py/raw/master/doc/USA2.svg.png)
 
 Command-specific parameters are:
 
@@ -180,7 +182,7 @@ Command-specific parameters are:
 
 The quality level will be used to compute the parameter for the polygon simplification (also called *generalization*). The higher the quality, the less the polygons are simplified. A quality of 100 means no simplification. Note that the overall quality also depends on the output size.
 
-![different qualities](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/quality.png)
+![different qualities](https://github.com/svgmap/svgmap.py/raw/master/doc/quality.png)
 
 ### Joining regions
 
@@ -190,4 +192,4 @@ Fortunately, in those cases the Natural Earth adm1 shapefile stores some values 
 
 	svgmap.py regions GBR --join-regions
 
-![United Kingdom regions](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/GBR-regions.png)   ![United Kingdom regions](https://github.com/gka/svgmap/raw/master/svgmap.py/doc/GBR-regions-joined.png)
+![United Kingdom regions](https://github.com/svgmap/svgmap.py/raw/master/doc/GBR-regions.png)   ![United Kingdom regions](https://github.com/svgmap/svgmap.py/raw/master/doc/GBR-regions-joined.png)
