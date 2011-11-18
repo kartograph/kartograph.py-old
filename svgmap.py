@@ -71,10 +71,10 @@ def parse_args():
 	# parse options
 	# global options
 	opt_str = "o:w:h:r:p:q:sfvg:"
-	long_opt = ['output=', 'width=', 'height=', 'ratio=', 'padding=', 'quality=', 'sea', 'force-overwrite', 'context-quality=', 'verbose', 'proj=','list-projections','graticule=','round-coordinates']
+	long_opt = ['output=', 'width=', 'height=', 'ratio=', 'padding=', 'quality=', 'sea', 'force-overwrite', 'context-quality=', 'verbose', 'proj=','list-projections','graticule=','round-coordinates','lon0=','lat0=','lat1=','lat2=']
 
 	if command == "world":
-		long_opt += ['lon0=','lat0=','lat1=','lat2=']
+		long_opt += []
 		opt_str += ''
 		cmd_args = sys.argv[2:]
 		
@@ -83,7 +83,7 @@ def parse_args():
 			print '\nError: you must define the countries to be rendered'
 			print
 			sys.exit(2)
-		long_opt += ['graticule','lon0=','lat0=','lat1=','lat2=']
+		long_opt += []
 		opt_str += 'g'
 		options.target_countries = sys.argv[2].split(',')
 		cmd_args = sys.argv[3:]
@@ -416,8 +416,8 @@ def _remove_unicode(str):
 	import unicodedata
 	return unicodedata.normalize('NFKD', str).encode('ascii','ignore')	
 
-def _get_polygon_data(rec, region=False):
-	if region:
+def _get_polygon_data(rec, regions=False):
+	if regions:
 		data = { 'oid': rec[0], 'iso': rec[2] }
 		if rec[7] != "":
 			data['hasc'] = rec[7]
@@ -940,23 +940,31 @@ def render_country_and_context(iso3, outfile=None, regions=False):
 	# initialize projection, use center lat/lng from shape record as center
 	center_lon, center_lat = get_country_center(shp, iso3=iso3)
 	
-	globe = proj.LAEA( center_lat , center_lon )
+	#globe = proj.LAEA( center_lat , center_lon )
+	
+	if options.force_lat0: center_lat = options.lat0
+	if options.force_lon0: center_lon = options.lon0
+	
+	globe = options.projection(lon0=center_lon, lat0=center_lat)
 
 	bbox = get_bounding_box(iso3, shp, globe)
 	
 	# calculate view
 	view = get_view(bbox)
-	viewBox = Bounds2D(width=view.width, height=view.height)
+	viewbox = Bounds2D(width=view.width, height=view.height)
 
 	svg = init_svg_canvas(view, bbox, globe, center_lat, center_lon)
 	
 	# add sea background
 	if options.sea_layer:
-		svg.append(SVG('g', SVG('rect', x=0, y=0, width=view.width, height=view.height, style='stroke:none;fill:#d0ddf0'), id="bg"))
+		add_sea_layer(svg, globe, view, viewbox)
+
+	if options.graticule:
+		add_graticule(svg, globe, view, viewbox)
 	
 	if options.verbose: print "rendering country with context", iso3
 	
-	polygons = get_polygons_country_context(iso3, shprec, viewBox, view, globe, regions=regions)
+	polygons = get_polygons_country_context(iso3, shprec, viewbox, view, globe, regions=regions)
 	
 	if regions and options.join_regions:
 		polygons = join_regions(iso3, polygons)
@@ -966,7 +974,7 @@ def render_country_and_context(iso3, outfile=None, regions=False):
 	
 	simplify_polygons(polygons, focusFilter=_focus)
 	
-	polygons = clip_polygons(polygons, viewBox)
+	polygons = clip_polygons(polygons, viewbox)
 	
 	#draw_map(country_iso3, svg, polygons)
 	add_map_layer(svg, polygons, 'context', filter=_context)

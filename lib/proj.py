@@ -604,7 +604,7 @@ class Satellite(Azimuthal):
 	up .. angle the camera is turned away from north (clockwise)
 	tilt .. angle the camera is tilted 
 	"""
-	def __init__(self,lat0=0.0,lon0=0.0,dist=3.45,up=35, tilt=0):
+	def __init__(self,lat0=0.0,lon0=0.0,dist=1.02,up=0, tilt=0):
 		import sys
 		Azimuthal.__init__(self, 0, 0)
 		
