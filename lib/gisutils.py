@@ -429,7 +429,7 @@ class View(object):
 		return 'View(w=%f, h=%f, pad=%f, scale=%f, bbox=%s)' % (self.width, self.height, self.padding, self.scale, self.bbox)
 		
 		
-def clipToRect(polygon, bbox):
+def clip_to_rect(polygon, bbox):
 	"""
 	clips a polygon to a given bounding box
 	takes in a gisutils.Polygon and gisutils.Bounds2D
