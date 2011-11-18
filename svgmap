@@ -1,0 +1,200 @@
+#!/usr/bin/env python2.7
+"""
+    svgmap - a simple toolset that helps creating interactive thematic maps
+    Copyright (C) 2011  Gregor Aisch
+
+    This program is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    This program is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with this program.  If not, see <http://www.gnu.org/licenses/>.
+"""
+
+"""
+	This is the command line interface for svgmap.
+"""
+
+import sys, os.path, getopt
+
+def usage():
+	print '\nUsage: '+os.path.basename(sys.argv[0])+' command'
+	print 'Possible commands are:\n'
+	
+	print '   country      renders country boundary'
+	print '   regions      renders all admin-level 1 regions of a country'
+	print '   region       renders a single admin-level 1 region of a country'
+	print '   world        renders world map'
+	print '   layer        adds a new layer from a shapefile'
+	print
+
+	
+def main():
+	global command, options
+	
+	parse_args()
+	
+	if command == "world":
+		render_world_map()
+	elif command in ("country", "regions"):
+		render_regions_or_country()
+	elif command == "region":
+		render_region()
+	elif command == "layer":
+		add_shapefile_layer()
+	elif command == "countries":
+		render_countries()
+
+
+
+def list_projections():
+	print 'available projections are:'
+	for pj in proj.projections:
+		print '  - %s' % pj
+	print
+
+
+
+def parse_args():
+	global command, options, math
+	
+	options = Options()
+	
+	if len(sys.argv) < 2:
+		usage()
+		sys.exit(2)
+	
+	command = sys.argv[1]
+	
+	if command not in ('world','country','regions','layer','region','countries'):
+		usage()
+		sys.exit(2)
+	
+	# parse options
+	# global options
+	opt_str = "o:w:h:r:p:q:sfvg:"
+	long_opt = ['output=', 'width=', 'height=', 'ratio=', 'padding=', 'quality=', 'sea', 'force-overwrite', 'context-quality=', 'verbose', 'proj=','list-projections','graticule=','round-coordinates','lon0=','lat0=','lat1=','lat2=']
+
+	if command == "world":
+		long_opt += []
+		opt_str += ''
+		cmd_args = sys.argv[2:]
+		
+	if command == "countries":
+		if len(sys.argv) < 3:
+			print '\nError: you must define the countries to be rendered'
+			print
+			sys.exit(2)
+		long_opt += []
+		opt_str += 'g'
+		options.target_countries = sys.argv[2].split(',')
+		cmd_args = sys.argv[3:]
+		
+	
+	if command in ('regions', 'country'):
+		if len(sys.argv) < 3:
+			print '\nError: you must define the country to be rendered, e.g.\n\n   '+os.path.basename(sys.argv[0])+' '+command+' USA'
+			print '   '+os.path.basename(sys.argv[0])+' '+command+' USA,DEU,CHN\n   '+os.path.basename(sys.argv[0])+' '+command+' all'
+			print
+			sys.exit(2)
+		else:
+			options.target_countries = sys.argv[2].split(',')
+			long_opt += ['context']
+			opt_str += "c"	
+			cmd_args = sys.argv[3:]
+	
+	if command in ('regions', 'region'):
+		long_opt += ['join-regions']
+		opt_str += 'j'
+		
+	if command == "layer":
+		if len(sys.argv) < 4:
+			print "\nError: you must provide a svg-map and a shapefile\n\n"+os.path.basename(sys.argv[0])+' '+command+' SVGMAP.svg SHAPEFILE'
+		else:
+			long_opt += ['layer-id=', 'crop-at-layer=']
+			options.svg_src = sys.argv[2]
+			options.shapefile_src = sys.argv[3]
+			cmd_args = sys.argv[4:]
+	
+	try:
+		opts, args = getopt.getopt(cmd_args, opt_str, long_opt)
+		
+		for o, a in opts:
+			if o in ('-w', '--width'):
+				options.out_width = int(a)
+			elif o in ('-h', '--height'):
+				options.out_height = int(a)
+			elif o in ('-r', '--ratio'):
+				options.out_ratio = float(a)
+				options.force_ratio = True
+			elif o in ('-v', '--verbose'):
+				options.verbose = True
+			elif o in ('-o', '--output'):
+				options.out_file = a
+			elif o in ('-c', '--context'):
+				options.add_context = True
+			elif o in ('--padding', '-p'):
+				options.out_padding_perc = float(a)/100
+			elif o in ('-q', '--quality'):
+				q = max(0, min(100, float(a)))/100.0
+				options.simplification = 100 - math.pow(q,.25)*100
+			elif o in ('--context-quality'):
+				q = max(0, min(100, float(a)))/100.0
+				options.context_simplification = 100 - math.pow(q,.25)*100
+			elif o in ('-s', '--sea'):
+				options.sea_layer = True
+			elif o in ('-f', '--force-overwrite'):
+				options.force_overwrite = True
+			elif o == '--crop-at-layer':
+				options.crop_at_layer = a
+			elif o == '--layer-id':
+				options.layer_id = a
+			elif o in ('--join-regions', '-j'):
+				options.join_regions = True
+			elif o in ('-g', '--graticule'):
+				options.graticule = True
+				options.grat_step = int(a)
+			elif o == '--round-coordinates':
+				options.round_coordinates = True
+			elif o == '--lon0':
+				options.lon0 = float(a)
+				options.force_lon0 = True
+			elif o == '--lat0':
+				options.lat0 = float(a)
+				options.force_lat0 = True
+			elif o == '--lat1':
+				options.lat1 = float(a)
+				options.force_lat1 = True
+			elif o == '--lat2':
+				options.lat2 = float(a)
+				options.force_lat2 = True
+			elif o in ('--graticule', '-g'):
+				options.graticule = True
+			elif o in ('--proj'):
+				if a in proj.projections:
+					options.projection = proj.projections[a]
+				else:
+					print 'projection "%s" not found' % a
+					list_projections()
+					sys.exit(2)
+			elif o == '--list-projections':
+				list_projections()
+				sys.exit(2)
+
+		options.applyDefaults()
+		
+	except getopt.GetoptError, err:
+		print str(err)
+		usage()
+		sys.exit(2)
+	
+
+
+if __name__ == "__main__":
+    main()
