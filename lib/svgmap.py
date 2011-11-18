@@ -42,7 +42,7 @@ a list of exceptions for country center computation
 custom_country_center = {}
 custom_country_center['USA'] = (-98.606,39.622)	
 		
-from gisutils import Bounds2D, Point, View
+from gisutils import Bounds2D, Point, View, Polygon
 import gisutils
 import proj
 
@@ -143,10 +143,10 @@ class SVGMap:
 		"""
 		returns a list of region shape indices for a country
 		"""
+		region_recs = self.sf_recs['regions']
 		reg_indices = []
 		for i in range(len(region_recs)):
-			iso3 = region_recs[i][2]
-			if iso3 == country_iso3:
+			if iso3 == region_recs[i][2]:
 				reg_indices.append(i)
 		return reg_indices
 		
@@ -161,14 +161,14 @@ class SVGMap:
 			# use value defined in exceptions
 			min_area_percent = country_min_area[iso3]
 	
-		shape = get_country_shape(iso3)
+		shape = self.get_country_shape(iso3)
 		parts = shape.parts[:]
 		parts.append(len(shape.points))
 		max_area = 0
 		areas = []
 		for j in range(0,len(parts)-1):
 			pts = shape.points[parts[j]:parts[j+1]]
-			a = area(pts)
+			a = gisutils.area(pts)
 			areas.append(a)
 		max_area = max(areas)
 		
@@ -298,8 +298,8 @@ class SVGMap:
 				shp = self.get_shape('regions', j)
 				polys += self.get_shape_polygons(shp, iso3, globe, view, data=self.get_polygon_data(rec, regions=True))
 		else:
-			shp = get_country_shape(iso3)
-			rec = get_country_record(iso3)
+			shp = self.get_country_shape(iso3)
+			rec = self.get_country_record(iso3)
 			polys = self.get_shape_polygons(shp, iso3, globe, view, data=self.get_polygon_data(rec))		
 		return polys
 	
@@ -314,8 +314,8 @@ class SVGMap:
 		#options = self.options, country_recs, country_shapes, region_recs, region_sf
 		options = self.options
 		
-		focus_shape = get_country_shape(country_iso3)
-		focus_rec = get_country_record(country_iso3)
+		focus_shape = self.get_country_shape(country_iso3)
+		focus_rec = self.get_country_record(country_iso3)
 		
 		country_recs = self.sf_recs['countries']
 		region_recs = self.sf_recs['regions']
@@ -340,8 +340,8 @@ class SVGMap:
 					# we have regions for this country
 					for j in reg_indices:
 						rec = region_recs[j]
-						shp = region_sf.shapeRecord(j).shape
-						_addPolygons(polygons, self.get_shape_polygons(shp, iso3, globe, view, data=self.get_polygon_data(rec, regions=True)))
+						shp = self.get_shape('regions', j)
+						polygons += self.get_shape_polygons(shp, iso3, globe, view, data=self.get_polygon_data(rec, regions=True))
 				else:
 					# we don't have or don't want regions, instead use the country itself
 					polygons += self.get_shape_polygons(focus_shape, iso3, globe, view)
@@ -374,14 +374,15 @@ class SVGMap:
 		used for mode=countries
 		"""
 		polygons = []
-		
+		country_recs = self.sf_recs['countries']
 		for i in range(len(country_recs)):
-			iso3 = country_recs[i][29].upper()
-			shp = country_shapes[i].shape
-			polys = self.get_shape_polygons(shp, iso3, globe, view, data=self.get_polygon_data(country_recs[i]))
+			rec = country_recs[i]
+			iso3 = rec[29].upper()
+			shp = self.get_shape('countries', i)
+			polys = self.get_shape_polygons(shp, iso3, globe, view, data=self.get_polygon_data(rec))
 			
 			for poly in polys:
-				if poly.bbox.intersects(viewBox):
+				if poly.bbox.intersects(viewbox):
 					polygons.append(poly)			
 			
 		return polygons
@@ -510,6 +511,8 @@ class SVGMap:
 					filtered.append(poly)
 			polygons = filtered
 			
+		from svgfig import SVG
+		
 		svgGroup = SVG('g', id=layerId)
 		svg.append(svgGroup)
 		
@@ -538,6 +541,9 @@ class SVGMap:
 	
 
 	def add_sea_layer(self, svg, globe, view, viewbox):
+		
+		from svgfig import SVG
+		
 		sea = globe.sea_shape()
 		sea_pts = []
 		for s in sea:
@@ -555,6 +561,7 @@ class SVGMap:
 		"""
 		"""
 		from clipping import Line
+		from svgfig import SVG
 		
 		g = SVG('g', id='graticule')
 		svg.append(g)
@@ -661,12 +668,10 @@ class SVGMap:
 		"""
 		either computes the center of a shape or uses customized center coordinates
 		"""
-		global custom_country_center
-		
 		if iso3 != None and iso3 in custom_country_center:
 			return custom_country_center[iso3]
 		else:
-			return shape_center(shp)
+			return gisutils.shape_center(shp)
 	
 		
 	def render_world_map(self, outfile=None):
@@ -683,7 +688,7 @@ class SVGMap:
 		viewbox = Bounds2D(width=view.width, height=view.height)
 		
 		lat0, lon0 = (0.0, 0.0)
-		svg = self.init_svg_canvas(view, bbox, globe, lat0, lon0)
+		svg = self.init_svg_canvas(view, bbox, globe)
 	
 		if options.sea_layer:
 			self.add_sea_layer(svg, globe, view, viewbox)
@@ -694,10 +699,10 @@ class SVGMap:
 		polygons = self.get_polygons_world(globe, view)
 		self.simplify_polygons(polygons)
 		self.add_map_layer(svg, polygons, 'countries', groupBy='iso')
-		save_or_display(svg, 'worldmap', out_file)
+		self.save_or_display(svg, 'worldmap', outfile)
 	
 	
-	def render_countries(target_iso3s, outfile=None):
+	def render_countries(self, target_iso3s, outfile=None):
 		"""
 		renders a single map that contains at least the specified countries
 		in most cases, the map will also contain other countries
@@ -715,8 +720,8 @@ class SVGMap:
 			clats = []
 			for i in range(len(targets)):
 				tgt = targets[i]
-				iso3 = options.target_countries[i]
-				lon0, lat0 = self.get_country_center(tgt.shape, iso3=iso3)
+				iso3 = target_iso3s[i]
+				lon0, lat0 = self.get_country_center(tgt['shape'], iso3=iso3)
 				clons.append(lon0)
 				clats.append(lat0)
 			
@@ -733,16 +738,16 @@ class SVGMap:
 		# and compute total bounding box and view
 		bbox = Bounds2D()
 		for i in range(len(targets)):
-			iso3 = options.target_countries[i]
-			shp = targets[i].shape
-			cbox = self.get_country_bbox(iso3, shp, globe)
+			iso3 = target_iso3s[i]
+			shp = targets[i]['shape']
+			cbox = self.get_country_bbox(iso3, globe)
 			bbox.join(cbox)
 				
 		view = self.get_view(bbox)
 		viewBox = Bounds2D(width=view.width, height=view.height)	
 	
 		# init svg
-		svg = self.init_svg_canvas(view, bbox, globe, options.lat0, options.lon0)
+		svg = self.init_svg_canvas(view, bbox, globe)
 		
 		# add sea background
 		if options.sea_layer:
@@ -759,7 +764,7 @@ class SVGMap:
 		self.add_map_layer(svg, polygons, 'countries', groupBy='iso')
 		
 		# save and exit
-		save_or_display(svg, '-'.join(options.target_countries), outfile)
+		self.save_or_display(svg, '-'.join(target_iso3s), outfile)
 	
 	
 	
@@ -810,24 +815,24 @@ class SVGMap:
 				render_country(iso3, outfile=outfile, regions=(command == "regions"))
 				
 		
-	def render_country(iso3, regions=False, outfile=None):
+	def render_country(self, iso3, regions=False, outfile=None):
 		"""
 		renders a single country or its regions
 		"""
-		shprec = get_country_shape(iso3)
-		rec = shprec.record
-		shp = shprec.shape
+		shp = self.get_country_shape(iso3)
+		rec = self.get_country_record(iso3)
 		
 		center_lon, center_lat = self.get_country_center(shp, iso3=iso3)	
 		if options.force_lat0: center_lat = options.lat0
 		if options.force_lon0: center_lon = options.lon0
+		
 		globe = options.projection(lon0=center_lon, lat0=center_lat)	
-		bbox = self.get_country_bbox(iso3, shp, globe)
+		bbox = self.get_country_bbox(iso3, globe)
 		
 		view = self.get_view(bbox)
 		viewbox = Bounds2D(width=view.width, height=view.height)	
 	
-		svg = self.init_svg_canvas(view, bbox, globe, center_lat, center_lon)
+		svg = self.init_svg_canvas(view, bbox, globe)
 		
 		# add sea background
 		if options.sea_layer:
@@ -838,7 +843,7 @@ class SVGMap:
 			
 		if options.verbose: print "rendering country "+iso3, regions
 		
-		polygons = get_polygons_country(iso3, shprec, viewbox, view, globe, regions=regions)
+		polygons = self.get_polygons_country(iso3, view, globe, regions=regions)
 		
 		if regions and options.join_regions:
 			polygons = self.join_regions(iso3, polygons)
@@ -848,31 +853,30 @@ class SVGMap:
 		#polygons = self.clip_polygons(polygons, viewbox)
 		self.add_map_layer(svg, polygons, iso3, groupBy=('iso','oid')[regions])
 				
-		save_or_display(svg, iso3, options.outfile)
+		self.save_or_display(svg, iso3, outfile)
 	
 	
-	def render_country_and_context(iso3, regions=False, outfile=None):
+	def render_country_and_context(self, iso3, regions=False, outfile=None):
 		"""
 		renders a country with surrounding countries
 		"""
 		options = self.options
 		
-		shprec = get_country_shape(iso3) # get center shape
-		shp = shprec.shape
-	
+		shp = self.get_country_shape(iso3) # get center shape
+		
 		# initialize projection, use center lat/lng from shape record as center
 		center_lon, center_lat = self.get_country_center(shp, iso3=iso3)	
 		if options.force_lat0: center_lat = options.lat0
 		if options.force_lon0: center_lon = options.lon0
 		globe = options.projection(lon0=center_lon, lat0=center_lat)
 	
-		bbox = self.get_country_bbox(iso3, shp, globe)
+		bbox = self.get_country_bbox(iso3, globe)
 		
 		# calculate view
 		view = self.get_view(bbox)
 		viewbox = Bounds2D(width=view.width, height=view.height)
 	
-		svg = self.init_svg_canvas(view, bbox, globe, center_lat, center_lon)
+		svg = self.init_svg_canvas(view, bbox, globe)
 		
 		# add sea background
 		if options.sea_layer:
@@ -883,7 +887,7 @@ class SVGMap:
 		
 		if options.verbose: print "rendering country with context", iso3
 		
-		polygons = get_polygons_country_context(iso3, viewbox, view, globe, regions=regions)
+		polygons = self.get_polygons_country_context(iso3, viewbox, view, globe, regions=regions)
 		
 		if regions and options.join_regions:
 			polygons = self.join_regions(iso3, polygons)
@@ -902,7 +906,7 @@ class SVGMap:
 		
 		# draw_locations(svg, globe, view, country_iso3, "FIN", "FI", ['01'], fills={'03':'#c00', '06':'#03c'})	
 	
-		save_or_display(svg, iso3, outfile)
+		self.save_or_display(svg, iso3, outfile)
 	
 	
 	
@@ -996,15 +1000,10 @@ class SVGMap:
 			
 		self.add_map_layer(svg, polygons, 'layer')
 		
-		save_or_display(svg, "", out_file)
+		self.save_or_display(svg, "", outfile)
 		
-	
-	
-	
-	
-	
-	
-	def save_or_display(svg, iso3, outfile):
+
+	def save_or_display(self, svg, iso3, outfile):
 		"""
 		this finally saves the SVG map or displays it in firefox 
 		"""
@@ -1106,11 +1105,7 @@ class SVGMapOptions(object):
 			self.out_padding = dp
 
 		if self.projection is None:
-			if command == "world":
-				self.projection = proj.NaturalEarth
-			else:
-				self.projection = proj.LAEA
-
+			self.projection = proj.NaturalEarth
 
 
 
@@ -1126,37 +1121,62 @@ class Utils:
 if __name__ == '__main__':
 	# some tests
 	options = SVGMapOptions()
-	options.verbose = True
+	options.verbose = False
+	options.applyDefaults()
 	
-	print 'constructing'
+	import sys
+	
+	def _test(str, res):
+		print '\n   ::%s::\n   ' % str,
+		print res
+		return res
+	
+	
 	svgmap = SVGMap(options)
-	print
-	
-	print 'load shp recs'
-	svgmap.load_shape_records()
-	print 
-	
-	print 'get shape'
-	print svgmap.get_shape('countries', 123)
-	print
-	
-	print 'shape index'
-	DEU = svgmap.country_index['DEU']
-	print 'DEU =', DEU
-	print
-	
-	print 'get_country_record'
-	print svgmap.get_country_record('DEU')
-	print 
-	
-	print 'get_country_shape'
-	print svgmap.get_country_shape('DEU')
-	print
-	
-	print 'get_country_shape'
-	print svgmap.get_country_shape('DEU')
-	print
+	from proj import Robinson, LAEA, Stereographic
+	proj = Robinson()
 
-	print 'shape area'
-	print '%.2f sqkm' % svgmap.shape_area('countries', DEU)
+	
+	_test('load shp recs', svgmap.load_shape_records())
+	_test('get shape', svgmap.get_shape('countries', 123))
+	DEU = _test('shape index', svgmap.country_index['DEU'])
+	rec = svgmap.get_country_record('DEU')
+	_test('get_country_record', rec[:5]+['...'])
+	shp = _test('get_country_shape', svgmap.get_country_shape('DEU'))
+	_test('shape area', '%.2f sqkm'%svgmap.shape_area('countries', DEU))
+	_test('country region indices', svgmap.get_country_region_indices('DEU')[:5]+['...'])
+	bbox = _test('country bbox', svgmap.get_country_bbox('DEU', proj))
+	view = _test('init view', View(bbox, 400,300,10))
+	_test('init svg', svgmap.init_svg_canvas(view, bbox, proj)[:])
+	_test('get shp polys', svgmap.get_shape_polygons(shp,'DEU',proj,view)[:2]+['...'])
+	_test('get poly data', svgmap.get_polygon_data(rec))
+	#	_test('get_country_shape', svgmap.get_country_shape('DEU'))
+
+	svgmap.options.projection = LAEA
+
+	_test('render country', svgmap.render_country('DEU'))
+	_test('render regions', svgmap.render_country('DEU', regions=True))
+	#_test('render regions w context', svgmap.render_country_and_context('DEU', regions=True))
+	
+	svgmap.options.sea_layer = True
+	svgmap.options.graticule = 15
+	svgmap.options.projection = Robinson
+	svgmap.options.lon0 = -100
+	svgmap.options.force_lon0 = True
+	
+	#_test('render world map', svgmap.render_world_map())
+	
+	svgmap.options.projection = Stereographic
+	svgmap.options.lat0 = 90
+	svgmap.options.force_lat0 = True
+	
+	#_test('render world map (2)', svgmap.render_world_map())
+
+	svgmap.options.force_lat0 = False
+	svgmap.options.force_lon0 = False
+	svgmap.options.out_padding = 30
+	
+	_test('render countries', svgmap.render_countries(['ESP','FRA','DEU','GBR','ITA']))
+	
+	
 	print
