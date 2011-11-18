@@ -361,9 +361,18 @@ def init_svg_canvas(view, bbox, globe, center_lat, center_lon):
 
 	meta = SVG('metadata')
 	
-	proj = SVG('view', SVG('proj', globe.name), SVG('center', '%f,%f' % (center_lat,center_lon)), SVG('bbox', '%.2f,%.2f,%.2f,%.2f' % (round(bbox.left,2), round(bbox.top,2), round(bbox.width,2), round(bbox.height,2))), SVG('padding', str(options.out_padding)))
+	views = SVG('views')
 	
-	meta.append(proj)
+	view = SVG('view', padding=str(options.out_padding))
+	
+	proj = globe.toXML()
+	bbox = SVG('bbox', x=round(bbox.left,2), y=round(bbox.top,2), w=round(bbox.width,2), h=round(bbox.height,2))
+	
+	views.append(view)
+	view.append(proj)
+	proj.append(bbox)
+	
+	meta.append(views)
 	svg.append(meta)
 	
 	return svg
@@ -389,6 +398,7 @@ def _getPolygons(shp, id, globe, view, data=None):
 	parts = shp.parts[:]
 	parts.append(len(shp.points))
 	polys = []
+	if data is None: data = {}
 	errs = 0
 	for j in range(0,len(parts)-1):
 		pts = shp.points[parts[j]:parts[j+1]]
@@ -441,7 +451,7 @@ def get_polygons_country(iso3, shprec, viewBox, view, globe, regions=False):
 		for j in country_region_shapes:
 			rec = region_recs[j]
 			shp = region_sf.shapeRecord(j).shape
-			_addPolygons(polys, _getPolygons(shp, iso3, globe, view, data=_get_polygon_data(rec, region=True)))
+			_addPolygons(polys, _getPolygons(shp, iso3, globe, view, data=_get_polygon_data(rec, regions=True)))
 	else:
 		shp = shprec.shape
 		rec = shprec.record
@@ -485,7 +495,8 @@ def get_polygons_country_context(country_iso3, shprec, viewBox, view, globe, reg
 					_addPolygons(polygons, _getPolygons(shp, iso3, globe, view, data=_get_polygon_data(rec, regions=True)))
 			else:
 				# we don't have regions, instead use the country itself
-				_addPolygons(polygons, _getPolygons(focus_shape, iso3, globe, view, country_index[iso3]))
+				_addPolygons(polygons, _getPolygons(focus_shape, iso3, globe, view))
+				
 				if regions and options.verbose:
 					print "..no regions for ",iso3
 	return polygons
@@ -634,6 +645,8 @@ def add_map_layer(svg, polygons, layerId, filter=None, groupBy='oid'):
 		
 	svgGroup = SVG('g', id=layerId)
 	svg.append(svgGroup)
+	
+	print layerId, groupBy
 	
 	if groupBy != None:
 		polyGroups = group_polygons(polygons, groupBy)
@@ -897,35 +910,49 @@ def render_country(iso3, outfile=None, regions=False):
 	rec = shprec.record
 	shp = shprec.shape
 	
-	center_lon, center_lat = get_country_center(shp, iso3=iso3)
-	globe = proj.LAEA(lat0=center_lat , lon0=center_lon )
-	
+	center_lon, center_lat = get_country_center(shp, iso3=iso3)	
+	if options.force_lat0: center_lat = options.lat0
+	if options.force_lon0: center_lon = options.lon0
+	globe = options.projection(lon0=center_lon, lat0=center_lat)	
 	bbox = get_bounding_box(iso3, shp, globe)
 	
 	view = get_view(bbox)
-	viewBox = Bounds2D(width=view.width, height=view.height)	
+	viewbox = Bounds2D(width=view.width, height=view.height)	
 
 	svg = init_svg_canvas(view, bbox, globe, center_lat, center_lon)
 	
 	# add sea background
-	if options.sea_layer:		
-		svg.append(SVG('g', SVG('rect', x=0, y=0, width=view.width, height=view.height, style='stroke:none;fill:#d0ddf0'), id="bg"))
+	if options.sea_layer:
+		add_sea_layer(svg, globe, view, viewbox)
+
+	if options.graticule:
+		add_graticule(svg, globe, view, viewbox)
 		
 	if options.verbose: print "rendering country "+iso3, regions
 	
-	polygons = get_polygons_country(iso3, shprec, viewBox, view, globe, regions=regions)
+	polygons = get_polygons_country(iso3, shprec, viewbox, view, globe, regions=regions)
 	
 	if regions and options.join_regions:
 		polygons = join_regions(iso3, polygons)
 	
 	simplify_polygons(polygons)
 	
-	#polygons = clip_polygons(polygons, viewBox)
-	
-	add_map_layer(svg, polygons, iso3)
+	#polygons = clip_polygons(polygons, viewbox)
+	add_map_layer(svg, polygons, iso3, groupBy=('iso','oid')[regions])
 			
 	save_or_display(svg, iso3, outfile)
 
+
+
+
+
+# get projection center, either from options or from geometry
+# initialize projection
+# get bbox for view
+# init view
+# init canvas
+# eventually add sea and graticula
+# get polygons to be displayed in view
 
 
 def render_country_and_context(iso3, outfile=None, regions=False):
@@ -938,13 +965,9 @@ def render_country_and_context(iso3, outfile=None, regions=False):
 	shp = shprec.shape
 
 	# initialize projection, use center lat/lng from shape record as center
-	center_lon, center_lat = get_country_center(shp, iso3=iso3)
-	
-	#globe = proj.LAEA( center_lat , center_lon )
-	
+	center_lon, center_lat = get_country_center(shp, iso3=iso3)	
 	if options.force_lat0: center_lat = options.lat0
 	if options.force_lon0: center_lon = options.lon0
-	
 	globe = options.projection(lon0=center_lon, lat0=center_lat)
 
 	bbox = get_bounding_box(iso3, shp, globe)
@@ -976,9 +999,8 @@ def render_country_and_context(iso3, outfile=None, regions=False):
 	
 	polygons = clip_polygons(polygons, viewbox)
 	
-	#draw_map(country_iso3, svg, polygons)
-	add_map_layer(svg, polygons, 'context', filter=_context)
-	add_map_layer(svg, polygons, iso3, filter=_focus)
+	add_map_layer(svg, polygons, 'context', groupBy='iso', filter=_context)
+	add_map_layer(svg, polygons, iso3, groupBy=('iso','oid')[regions], filter=_focus)
 
 	# add geoip locations for debbugging purpose
 	
@@ -1000,7 +1022,7 @@ def add_shapefile_layer():
 	bbox = Bounds2D(left=b[0], top=b[1], width=b[2], height=b[3])
 	pj = svg[1][0][0][0]
 	pd = float(svg[1][0][3][0])
-	clat, clon = map(float, svg[1][0][1][0].split(','))
+	clon,clat = map(float, svg[1][0][1][0].split(','))
 	vh = float(svg['height'][:-2])
 	vw = float(svg['width'][:-2])
 	
@@ -1016,6 +1038,8 @@ def add_shapefile_layer():
 		globe = proj.LAEA(clat, clon)
 	elif pj == "naturalearth":
 		globe = proj.NaturalEarth()
+	elif pj == "satellite":
+		globe = proj.Satellite(clat,clon)
 		
 		
 	# eventually crop at layer
@@ -1059,9 +1083,9 @@ def add_shapefile_layer():
 			if poly.bbox.intersects(viewbox):
 				polygons.append(poly)
 	
-	print len(polygons)
 	
 	simplify_polygons(polygons)
+	
 	polygons = clip_polygons(polygons, viewbox)
 	
 	if layer_poly != None:
@@ -1144,6 +1168,9 @@ def render_countries(outfile=None):
 	
 	# save and exit
 	save_or_display(svg, '-'.join(options.target_countries), outfile)
+
+
+
 
 
 

@@ -33,7 +33,7 @@ class Proj(object):
 	"""	
 	HALFPI = math.pi * .5
 	QUARTERPI = math.pi * .25
-				
+					
 	def plot(self, polygon, truncate=True):
 		points = []
 		ignore = True
@@ -66,7 +66,12 @@ class Proj(object):
 		assert False, 'sea_shape not implemented'
 	
 	def __str__(self):
-		return 'Proj('+name+')'
+		return 'Proj('+self.name+')'
+		
+	def toXML(self):
+		from svgfig import SVG
+		p = SVG('proj', id=self.name)
+		return p
 		
 		
 class Cylindrical(Proj):
@@ -157,6 +162,11 @@ class Cylindrical(Proj):
 			lon, lat = s
 			out.append(self.project(lon, lat))
 		return out
+		
+	def toXML(self):
+		p = super(Cylindrical, self).toXML()
+		p['lon0'] = str(self.lon0)
+		return p
 
 
 class Equirectangular(Cylindrical):
@@ -466,6 +476,12 @@ class Azimuthal(Proj):
 			y = self.r + math.sin(math.radians(phi)) * self.r
 			out.append((x,y))
 		return out
+		
+	def toXML(self):
+		p = super(Azimuthal, self).toXML()
+		p['lon0'] = str(self.lon0)
+		p['lat0'] = str(self.lat0)
+		return p
 	
 		
 class Conic(Proj):
@@ -505,6 +521,13 @@ class Conic(Proj):
 			out.append(self.project(lon, lat))
 		return out
 
+	def toXML(self):
+		p = super(Conic, self).toXML()
+		p['lon0'] = str(self.lon0)
+		p['lat0'] = str(self.lat0)
+		p['lat1'] = str(self.lat1)
+		p['lat2'] = str(self.lat2)
+		return p
 
 class Orthographic(Azimuthal):
 	"""
@@ -604,12 +627,13 @@ class Satellite(Azimuthal):
 	up .. angle the camera is turned away from north (clockwise)
 	tilt .. angle the camera is tilted 
 	"""
-	def __init__(self,lat0=0.0,lon0=0.0,dist=1.02,up=0, tilt=0):
+	def __init__(self,lat0=0.0,lon0=0.0,dist=1.6,up=0, tilt=0):
 		import sys
 		Azimuthal.__init__(self, 0, 0)
 		
 		self.dist = dist
-		self.up = math.radians(up)
+		self.up = up
+		self.up_ = math.radians(up)
 		self.tilt = math.radians(tilt)
 		
 		self.scale = 1
@@ -640,9 +664,9 @@ class Satellite(Azimuthal):
 		xo = self.r * k * cos(phi) * sin(lam - self.lam0)
 		yo = -self.r * k * ( cos(self.phi0)*sin(phi) - sin(self.phi0)*cos(phi)*cos(lam - self.lam0) )
 		
-		# tilt
-		cos_up = cos(self.up)
-		sin_up = sin(self.up)
+		# rotate
+		cos_up = cos(self.up_)
+		sin_up = sin(self.up_)
 		cos_tilt = cos(self.tilt)
 		sin_tilt = sin(self.tilt)
 		
@@ -662,6 +686,12 @@ class Satellite(Azimuthal):
 		# work out if the point is visible
 		cosc = math.sin(elevation)*math.sin(self.elevation0)+math.cos(self.elevation0)*math.cos(elevation)*math.cos(azimuth-self.azimuth0)
 		return cosc >= (1.0/self.dist)
+	
+	def toXML(self):
+		p = super(Satellite, self).toXML()
+		p['dist'] = str(self.dist)
+		p['up'] = str(self.up)
+		return p
 
 projections['satellite'] = Satellite
 
@@ -755,7 +785,7 @@ if __name__ == '__main__':
 			proj = Proj(lat0=34.0, lon0=60)
 			proj.project(0,0)
 			proj.world_bounds()
-			
+			print proj.toXML()
 		except:
 			print 'Error', pj
 			print sys.exc_info()[0]
