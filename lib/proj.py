@@ -72,6 +72,18 @@ class Proj(object):
 		from svgfig import SVG
 		p = SVG('proj', id=self.name)
 		return p
+	
+	@staticmethod
+	def fromXML(xml):
+		id = xml['id']
+		if id in projections:
+			ProjClass = projections[id]
+			args = {}
+			for (prop,val) in xml:
+				if prop[0] != "id":
+					args[prop[0]] = float(val)
+			return ProjClass(**args)
+		raise Exception("could not restore projection from xml")
 		
 		
 class Cylindrical(Proj):
@@ -167,6 +179,9 @@ class Cylindrical(Proj):
 		p = super(Cylindrical, self).toXML()
 		p['lon0'] = str(self.lon0)
 		return p
+		
+	def __str__(self):
+		return 'Proj('+self.name+', lon0=%s)' % self.lon0
 
 
 class Equirectangular(Cylindrical):
@@ -482,6 +497,10 @@ class Azimuthal(Proj):
 		p['lon0'] = str(self.lon0)
 		p['lat0'] = str(self.lat0)
 		return p
+		
+	def __str__(self):
+		return 'Proj('+self.name+', lon0=%s, lat0=%s)' % (self.lon0, self.lat0)
+
 	
 		
 class Conic(Proj):
@@ -776,6 +795,8 @@ if __name__ == '__main__':
 	#p = LAEA(52.0,10.0)
 	#x,y = p.project(50,5)
 	#assert (round(x,2),round(y,2)) == (3962799.45, -2999718.85), 'LAEA proj error'
+	
+	print Proj.fromXML(Robinson(lat0=3, lon0=4).toXML())
 	
 	Robinson(lat0=3, lon0=4)
 	

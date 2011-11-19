@@ -23,6 +23,8 @@
 
 import sys, os.path, getopt
 
+from lib.svgmap import SVGMap, SVGMapOptions
+
 def usage():
 	print '\nUsage: '+os.path.basename(sys.argv[0])+' command'
 	print 'Possible commands are:\n'
@@ -40,31 +42,52 @@ def main():
 	
 	parse_args()
 	
+	svgmap = SVGMap(options)
+	
 	if command == "world":
-		render_world_map()
+		svgmap.render_world_map(outfile=options.outfile)
+		
 	elif command in ("country", "regions"):
-		render_regions_or_country()
+		iso3 = options.target_countries[0]
+		out = options.outfile
+		regions = command == "regions"
+		
+		if options.add_context:
+			svgmap.render_country_and_context(iso3, outfile=out, regions=regions)	
+		else:
+			svgmap.render_country(iso3, outfile=out, regions=regions)
+		
 	elif command == "region":
-		render_region()
+		iso3 = options.target_countries[0]
+		svgmap.render_region(iso3, outfile=options.outfile)
+		
 	elif command == "layer":
-		add_shapefile_layer()
+		svg_src = options.svg_src
+		shp_src = options.shapefile_src
+		data_col = options.layer_data_column
+		svgmap.add_shapefile_layer(svg_src, shp_src, data_column = data_col, outfile=options.outfile)
+		
 	elif command == "countries":
-		render_countries()
-
+		svgmap.render_countries(options.options.target_countries, options.target_countries, outfile=options.outfile)
 
 
 def list_projections():
+	import lib.proj
+	
 	print 'available projections are:'
-	for pj in proj.projections:
+	for pj in lib.proj.projections:
 		print '  - %s' % pj
 	print
 
 
 
 def parse_args():
-	global command, options, math
 	
-	options = Options()
+	global command, options
+	
+	import math
+	
+	options = SVGMapOptions()
 	
 	if len(sys.argv) < 2:
 		usage()
@@ -79,7 +102,7 @@ def parse_args():
 	# parse options
 	# global options
 	opt_str = "o:w:h:r:p:q:sfvg:"
-	long_opt = ['output=', 'width=', 'height=', 'ratio=', 'padding=', 'quality=', 'sea', 'force-overwrite', 'context-quality=', 'verbose', 'proj=','list-projections','graticule=','round-coordinates','lon0=','lat0=','lat1=','lat2=']
+	long_opt = ['output=', 'width=', 'height=', 'ratio=', 'padding=', 'quality=', 'sea', 'force-overwrite', 'context-quality=', 'verbose', 'proj=','list-projections','graticule=','round-coordinates','lon0=','lat0=','lat1=','lat2=','dist=','up=']
 
 	if command == "world":
 		long_opt += []
@@ -117,7 +140,7 @@ def parse_args():
 		if len(sys.argv) < 4:
 			print "\nError: you must provide a svg-map and a shapefile\n\n"+os.path.basename(sys.argv[0])+' '+command+' SVGMAP.svg SHAPEFILE'
 		else:
-			long_opt += ['layer-id=', 'crop-at-layer=']
+			long_opt += ['layer-id=', 'crop-at-layer=', 'data-col=']
 			options.svg_src = sys.argv[2]
 			options.shapefile_src = sys.argv[3]
 			cmd_args = sys.argv[4:]
@@ -136,7 +159,7 @@ def parse_args():
 			elif o in ('-v', '--verbose'):
 				options.verbose = True
 			elif o in ('-o', '--output'):
-				options.out_file = a
+				options.outfile = a
 			elif o in ('-c', '--context'):
 				options.add_context = True
 			elif o in ('--padding', '-p'):
@@ -162,32 +185,42 @@ def parse_args():
 				options.grat_step = int(a)
 			elif o == '--round-coordinates':
 				options.round_coordinates = True
-			elif o == '--lon0':
-				options.lon0 = float(a)
-				options.force_lon0 = True
-			elif o == '--lat0':
-				options.lat0 = float(a)
-				options.force_lat0 = True
-			elif o == '--lat1':
-				options.lat1 = float(a)
-				options.force_lat1 = True
-			elif o == '--lat2':
-				options.lat2 = float(a)
-				options.force_lat2 = True
 			elif o in ('--graticule', '-g'):
 				options.graticule = True
+			elif o == "--data-col":
+				options.layer_data_column = map(int, a.split(','))
+			
+			
+			# projection options
+			elif o == '--list-projections':
+				list_projections()
+				sys.exit(2)
 			elif o in ('--proj'):
-				if a in proj.projections:
-					options.projection = proj.projections[a]
+				import lib.proj
+				if a in lib.proj.projections:
+					options.projection = lib.proj.projections[a]
 				else:
 					print 'projection "%s" not found' % a
 					list_projections()
 					sys.exit(2)
-			elif o == '--list-projections':
-				list_projections()
-				sys.exit(2)
+			elif o == '--lon0':
+				options.proj_opts['lon0'] = float(a)
+				options.force_lon0 = True
+			elif o == '--lat0':
+				options.proj_opts['lat0'] = float(a)
+				options.force_lat0 = True
+			elif o == '--lat1':
+				options.proj_opts['lat1'] = float(a)
+				options.force_lat1 = True
+			elif o == '--lat2':
+				options.proj_opts['lat2'] = float(a)
+			elif o == '--dist':
+				options.proj_opts['dist'] = float(a)
+			elif o == '--up':
+				options.proj_opts['up'] = float(a)
+			
 
-		options.applyDefaults()
+		options.applyDefaults(command)
 		
 	except getopt.GetoptError, err:
 		print str(err)

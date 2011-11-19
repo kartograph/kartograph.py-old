@@ -57,6 +57,8 @@ class SVGMap:
 		self.shp_src['countries'] = self.options.data_path + 'shp/ne_10m_admin_0_countries'
 		self.shp_src['regions'] = self.options.data_path + 'shp/ne_10m_admin_1_states_provinces_shp'
 		
+		self.load_shape_records()
+		
 
 	def load_shape_records(self):
 		"""
@@ -156,6 +158,7 @@ class SVGMap:
 		returns the projected bounding box for a countries largest polygons
 		"""	
 		min_area_percent = 0.2
+		options = self.options
 	
 		if iso3 in country_min_area:
 			# use value defined in exceptions
@@ -224,13 +227,13 @@ class SVGMap:
 	
 		meta = SVG('metadata')
 		views = SVG('views')
-		view = SVG('view', padding=str(options.out_padding))
+		view = SVG('view', padding=str(options.out_padding), w=w, h=h)
 		proj = globe.toXML()
 		bbox = SVG('bbox', x=round(bbox.left,2), y=round(bbox.top,2), w=round(bbox.width,2), h=round(bbox.height,2))
 		
 		views.append(view)
 		view.append(proj)
-		proj.append(bbox)
+		view.append(bbox)
 		
 		meta.append(views)
 		svg.append(meta)
@@ -521,7 +524,7 @@ class SVGMap:
 			for group in polyGroups:
 				path_str_arr = []
 				for poly in group:
-					path_str_arr.append(poly.svgPathString(useInt=options.round_coordinates))
+					path_str_arr.append(poly.svgPathString(useInt=self.options.round_coordinates))
 				
 				# todo: looks ugly
 				svg_path = SVG('path', d=' '.join(path_str_arr))
@@ -562,6 +565,9 @@ class SVGMap:
 		"""
 		from clipping import Line
 		from svgfig import SVG
+		
+		options = self.options
+		lon0 = options.proj_opts['lon0']
 		
 		g = SVG('g', id='graticule')
 		svg.append(g)
@@ -614,7 +620,7 @@ class SVGMap:
 					lines += line & viewbox
 					
 				for line in lines:
-					path = SVG('path', d=line.svgPathString(), data_lon=options.lon0 - lon_)
+					path = SVG('path', d=line.svgPathString(), data_lon=lon0 - lon_)
 					g.append(path)
 					
 				
@@ -679,7 +685,7 @@ class SVGMap:
 		renders a world map
 		"""	
 		options = self.options
-		globe = options.projection(lon0=options.lon0, lat0=options.lat0)
+		globe = options.projection(**options.proj_opts)
 		
 		#bbox = Bounds2D()
 		bbox = globe.world_bounds()
@@ -687,7 +693,6 @@ class SVGMap:
 		view = self.get_view(bbox)	
 		viewbox = Bounds2D(width=view.width, height=view.height)
 		
-		lat0, lon0 = (0.0, 0.0)
 		svg = self.init_svg_canvas(view, bbox, globe)
 	
 		if options.sea_layer:
@@ -714,6 +719,8 @@ class SVGMap:
 			shprec = { 'shape': self.get_country_shape(iso3), 'record': self.get_country_record(iso3) }
 			targets.append(shprec)
 			
+		proj_opts = options.proj_opts.copy()
+			
 		if not options.force_lat0 or not options.force_lon0:
 			# get shape centers and use mean center as map center
 			clons = []
@@ -725,14 +732,13 @@ class SVGMap:
 				clons.append(lon0)
 				clats.append(lat0)
 			
-			if not options.force_lon0: options.lon0 = min(clons) + (max(clons) - min(clons)) * .5
-			if not options.force_lat0: options.lat0 = min(clats) + (max(clats) - min(clats)) * .5
+			if not options.force_lon0: proj_opts['lon0'] = min(clons) + (max(clons) - min(clons)) * .5
+			if not options.force_lat0: proj_opts['lat0'] = min(clats) + (max(clats) - min(clats)) * .5
 			if options.verbose:
-				print 'computed map center at %f,%f' % (options.lon0, options.lat0)
+				print 'computed map center at %f,%f' % (proj_opts['lon0'], proj_opts['lat0'])
 					
 		# initialize map projection
-		globe = options.projection(lon0=options.lon0, lat0=options.lat0)
-		
+		globe = options.projection(**proj_opts)
 		
 		# project countries to get bounding boxes
 		# and compute total bounding box and view
@@ -822,11 +828,14 @@ class SVGMap:
 		shp = self.get_country_shape(iso3)
 		rec = self.get_country_record(iso3)
 		
-		center_lon, center_lat = self.get_country_center(shp, iso3=iso3)	
-		if options.force_lat0: center_lat = options.lat0
-		if options.force_lon0: center_lon = options.lon0
+		options = self.options
 		
-		globe = options.projection(lon0=center_lon, lat0=center_lat)	
+		proj_opts = options.proj_opts.copy()
+		center_lon, center_lat = self.get_country_center(shp, iso3=iso3)	
+		if not options.force_lat0: proj_opts['lat0'] = center_lat
+		if not options.force_lon0: proj_opts['lon0'] = center_lon
+		
+		globe = options.projection(**proj_opts)	
 		bbox = self.get_country_bbox(iso3, globe)
 		
 		view = self.get_view(bbox)
@@ -865,10 +874,11 @@ class SVGMap:
 		shp = self.get_country_shape(iso3) # get center shape
 		
 		# initialize projection, use center lat/lng from shape record as center
+		proj_opts = options.proj_opts.copy()
 		center_lon, center_lat = self.get_country_center(shp, iso3=iso3)	
-		if options.force_lat0: center_lat = options.lat0
-		if options.force_lon0: center_lon = options.lon0
-		globe = options.projection(lon0=center_lon, lat0=center_lat)
+		if not options.force_lat0: proj_opts['lat0'] = center_lat
+		if not options.force_lon0: proj_opts['lon0'] = center_lon
+		globe = options.projection(**proj_opts)
 	
 		bbox = self.get_country_bbox(iso3, globe)
 		
@@ -910,21 +920,31 @@ class SVGMap:
 	
 	
 	
-	def add_shapefile_layer(self, outfile=None):
+	def add_shapefile_layer(self, svg_src, shp_src, data_column=None, outfile=None):
 		"""
 		adds the content of a shapefile as a new map layer
 		"""
-		import svgfig
+		import svgfig, shapefile
 		
-		svg = svgfig.load(options.svg_src)
+		if data_column == None: data_column = ()
 		
-		b = map(float, svg[1][0][2][0].split(','))
-		bbox = Bounds2D(left=b[0], top=b[1], width=b[2], height=b[3])
-		pj = svg[1][0][0][0]
-		pd = float(svg[1][0][3][0])
-		clon,clat = map(float, svg[1][0][1][0].split(','))
-		vh = float(svg['height'][:-2])
-		vw = float(svg['width'][:-2])
+		options = self.options
+		
+		svg = svgfig.load(svg_src)
+		
+		svg_views = svg[1][0]
+		
+		svg_view = svg_views[0]
+		svg_proj = svg_view[0]
+		svg_bbox = svg_view[1]
+		
+		pd = float(svg_view['padding'])
+		
+		globe = proj.Proj.fromXML(svg_proj)
+		bbox = Bounds2D(left=float(svg_bbox['x']), top=float(svg_bbox['y']), width=float(svg_bbox['w']), height=float(svg_bbox['h']))
+		
+		vh = float(svg_view['h'])
+		vw = float(svg_view['w'])
 		
 		options.out_width = vw
 		options.out_height = vh
@@ -933,14 +953,10 @@ class SVGMap:
 		
 		view = self.get_view(bbox)
 		viewbox = Bounds2D(width=view.width, height=view.height)
-		
-		if pj == "laea":
-			globe = proj.LAEA(clat, clon)
-		elif pj == "naturalearth":
-			globe = proj.NaturalEarth()
-		elif pj == "satellite":
-			globe = proj.Satellite(clat,clon)
 			
+		print view
+		print viewbox
+		print globe
 			
 		# eventually crop at layer
 		layer_poly = None
@@ -963,10 +979,10 @@ class SVGMap:
 			
 		# read shapefile
 		
-		sf = shapefile.Reader(options.shapefile_src)
+		sf = shapefile.Reader(shp_src)
 		
 		fields = []
-		for f in sf.fields:
+		for f in sf.fields[1:]:
 			fields.append(f[0].lower().replace('_','-'))
 		
 		shprecs = sf.shapeRecords()
@@ -975,9 +991,10 @@ class SVGMap:
 		for sx in range(len(shprecs)):
 			shp = shprecs[sx].shape
 			rec = shprecs[sx].record
-			data = { 'sx': sx }
-			for i in range(len(rec)):
+			data = {  }
+			for i in data_column:
 				data[fields[i]] = Utils.remove_unicode(rec[i])
+			
 			polys = self.get_shape_polygons(shp, "", globe, view, data=data)
 			for poly in polys:
 				if poly.bbox.intersects(viewbox):
@@ -1008,6 +1025,7 @@ class SVGMap:
 		this finally saves the SVG map or displays it in firefox 
 		"""
 		options = self.options
+		import os, os.path
 		
 		if outfile != None or (options.target_countries != None and options.target_countries[0] == 'all'):
 			if outfile == None: outfile = 'tmp/'+iso3+'.svg'
@@ -1032,7 +1050,7 @@ class SVGMapOptions(object):
 		self.out_height = None
 		self.out_ratio = None
 		self.out_padding_perc = 0.0 # percentage padding of min(width,height) 
-		self.out_file = None
+		self.outfile = None
 		self.force_ratio = False
 		self.data_path = 'data/'
 		self.add_context = False
@@ -1043,34 +1061,34 @@ class SVGMapOptions(object):
 		self.context_simplification = None
 		self.verbose = False
 		self.target_countries = None
-		self.sea_layer = False	
+		self.sea_layer = False
+		
 		self.projection = None
+		self.force_proj = False
 		
 		# options for add layer mode
 		self.shapefile_src = None
 		self.svg_src = None
 		self.layer_id = None
 		self.crop_at_layer = None
+		self.layer_data_column = ()
 	
 		# options for regions mode
 		self.join_regions = False
 		
 		# options for world mode
-		self.lat0 = 0.0
-		self.lon0 = 0.0
-		self.lat1 = 0.0
-		self.lat2 = 0.0
-		self.force_lat0 = False
-		self.force_lon0 = False
-		self.force_lat1 = False
-		self.force_lat2 = False
-	
+		
 		# graticule options
 		self.graticule = False
 		self.grat_step = 15
 		
+		# options for the projection, will be passed to projection via **
+		self.proj_opts = { 'lat0': 0, 'lon0': 0 }
+		self.force_lat0 = False
+		self.force_lon0 = False
 	
-	def applyDefaults(self):
+	
+	def applyDefaults(self, command=""):
 	
 		dw = 500    # defaults
 		dr = 1.67
@@ -1105,18 +1123,26 @@ class SVGMapOptions(object):
 			self.out_padding = dp
 
 		if self.projection is None:
-			self.projection = proj.NaturalEarth
+			if command in ("country","regions","countries"):
+				self.projection = proj.LAEA		
+				print "LAEA"
+			else:
+				self.projection = proj.NaturalEarth
+			
 
 
 
 class Utils:
+	@staticmethod
 	def remove_unicode(str):
 		"""
 		taken from http://stackoverflow.com/questions/1207457/convert-unicode-to-string-in-python-containing-extra-symbols
 		"""
 		import unicodedata
-		return unicodedata.normalize('NFKD', str).encode('ascii','ignore')	
-
+		if isinstance(str, unicode):
+			return unicodedata.normalize('NFKD', str).encode('ascii','ignore')	
+		else:
+			return str
 
 if __name__ == '__main__':
 	# some tests
@@ -1134,10 +1160,15 @@ if __name__ == '__main__':
 	
 	svgmap = SVGMap(options)
 	from proj import Robinson, LAEA, Stereographic
+	
+
+	svgmap.add_shapefile_layer('DE.svg', '../misc/de-wahlkreise/wahlkreise', data_columns=(2,4))
+
+	exit()
+	
 	proj = Robinson()
 
 	
-	_test('load shp recs', svgmap.load_shape_records())
 	_test('get shape', svgmap.get_shape('countries', 123))
 	DEU = _test('shape index', svgmap.country_index['DEU'])
 	rec = svgmap.get_country_record('DEU')
