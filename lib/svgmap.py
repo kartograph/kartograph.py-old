@@ -503,10 +503,11 @@ class SVGMap:
 	
 
 
-	def add_map_layer(self, svg, polygons, layerId, filter=None, groupBy='oid'):
+	def add_map_layer(self, svg, polygons, layerId, filter=None, groupBy='oid', polycolor=None):
 		"""
 		add a layer to the map
 		"""
+		
 		if filter != None:
 			filtered = []
 			for poly in polygons:
@@ -515,6 +516,7 @@ class SVGMap:
 			polygons = filtered
 			
 		from svgfig import SVG
+		from types import FunctionType
 		
 		svgGroup = SVG('g', id=layerId)
 		svg.append(svgGroup)
@@ -531,6 +533,9 @@ class SVGMap:
 				poly = group[0]
 				svg_path['data-iso'] = poly.id
 				
+				if type(polycolor) == FunctionType:
+					svg_path['fill'] = polycolor(poly.data)
+				
 				for key in poly.data:
 					svg_path['data-'+key] = poly.data[key]
 						
@@ -538,6 +543,8 @@ class SVGMap:
 		else:
 			for poly in polygons:			
 				svg_path = SVG('path', d=poly.svgPathString(useInt=options.round_coordinates))
+				if type(polycolor) == FunctionType:
+					svg_path['fill'] = polycolor(poly.data)
 				for key in poly.data:
 					svg_path['data-'+key] = poly.data[key]
 				svgGroup.append(svg_path)
@@ -859,7 +866,8 @@ class SVGMap:
 		
 		self.simplify_polygons(polygons)
 		
-		#polygons = self.clip_polygons(polygons, viewbox)
+		polygons = self.clip_polygons(polygons, viewbox)
+		
 		self.add_map_layer(svg, polygons, iso3, groupBy=('iso','oid')[regions])
 				
 		self.save_or_display(svg, iso3, outfile)
@@ -920,7 +928,7 @@ class SVGMap:
 	
 	
 	
-	def add_shapefile_layer(self, svg_src, shp_src, data_column=None, outfile=None):
+	def add_shapefile_layer(self, svg_src, shp_src, data_column=None, outfile=None, polycolor=None):
 		"""
 		adds the content of a shapefile as a new map layer
 		"""
@@ -1015,7 +1023,7 @@ class SVGMap:
 					out += poly_to_polygons(poly_, id=polygon.id, data=polygon.data)
 			polygons = out
 			
-		self.add_map_layer(svg, polygons, 'layer')
+		self.add_map_layer(svg, polygons, 'layer', polycolor=polycolor)
 		
 		self.save_or_display(svg, "", outfile)
 		

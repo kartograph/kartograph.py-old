@@ -577,7 +577,7 @@ class LAEA(Azimuthal):
 	implementation taken from 
 	Snyder, Map projections - A working manual
 	"""
-	def __init__(self,lat0=0.0,lon0=0.0):
+	def __init__(self,lon0=0.0,lat0=0.0):
 		import sys
 		self.scale = math.sqrt(2)*0.5
 		Azimuthal.__init__(self, lat0, lon0)		
