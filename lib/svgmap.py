@@ -53,6 +53,8 @@ class SVGMap:
 		if self.options is None: 
 			self.options = SVGMapOptions()
 		
+		self.options.applyDefaults()
+		
 		self.shp_src = {}
 		self.shp_src['countries'] = self.options.data_path + 'shp/ne_10m_admin_0_countries'
 		self.shp_src['regions'] = self.options.data_path + 'shp/ne_10m_admin_1_states_provinces_shp'

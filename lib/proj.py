@@ -194,7 +194,7 @@ class Equirectangular(Cylindrical):
 		Cylindrical.__init__(self, lon0 = lon0)
 	
 	def project(self, lon, lat):
-		return (lon * math.cos(self.phi0), lat*-1)
+		return (lon * math.cos(self.phi0)*1000, lat*-1*1000)
 
 projections['lonlat'] = Equirectangular
 
@@ -203,46 +203,53 @@ class CEA(Cylindrical):
 	"""
 	Cylindrical Equal Area Projection
 	"""
-	def __init__(self, lat0 = 0.0, lon0 = 0.0):
+	def __init__(self, lat0 = 0.0, lon0 = 0.0, lat1 = 0.0):
 		self.lat0 = lat0
+		self.lat1 = lat1
 		self.phi0 = rad(lat0 * -1)
+		self.phi1 = rad(lat1 * -1)
 		self.lam0 = rad(lon0)
 		Cylindrical.__init__(self, lon0 = lon0)
 		
 	def project(self, lon, lat):
 		lam = rad(lon)
 		phi = rad(lat*-1)
-		x = (lam) * math.cos(self.phi0)
-		y = math.sin(phi) / math.cos(self.phi0)
+		x = (lam) * math.cos(self.phi1) * 1000
+		y = math.sin(phi) / math.cos(self.phi1) * 1000
 		return (x,y)
+		
+	def toXML(self):
+		p = super(CEA, self).toXML()
+		p['lat1'] = str(self.lat1)
+		return p
 
 projections['cea'] = CEA
 
 
 class GallPeters(CEA):
 	def __init__(self, lat0 = 0.0, lon0=0.0):
-		CEA.__init__(self, lat0=45, lon0=lon0)
+		CEA.__init__(self, lon0=lon0, lat0=0, lat1=45)
 
 projections['gallpeters'] = GallPeters
 
 
 class HoboDyer(CEA):
 	def __init__(self, lat0=0.0, lon0=0.0):
-		CEA.__init__(self, lat0=37.5, lon0=lon0)
+		CEA.__init__(self, lon0=lon0, lat0=lat0, lat1=37.5)
 
 projections['hobodyer'] = HoboDyer
 
 
 class Behrmann(CEA):
 	def __init__(self, lat0 = 0.0, lon0=0.0):
-		CEA.__init__(self, lat0=30, lon0=lon0)
+		CEA.__init__(self, lat1=30, lat0=lat0, lon0=lon0)
 
 projections['behrmann'] = Behrmann
 
 
 class Balthasart(CEA):
 	def __init__(self, lat0 = 0.0, lon0=0.0):
-		CEA.__init__(self, lat0=50, lon0=lon0)
+		CEA.__init__(self, lat1=50, lat0=lat0, lon0=lon0)
 
 projections['balthasart'] = Balthasart
 

@@ -384,7 +384,9 @@ class Polygon(object):
 		returns the path string representation of this polygon
 		"""
 		ps = ''
-		for pt in self.points:
+		pts = self.points[:]
+		pts.append(pts[0])
+		for pt in pts:
 			if pt.deleted: continue #ignore deleted points
 			if ps == '': ps = 'M'
 			else: ps += 'L'
