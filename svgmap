@@ -68,7 +68,7 @@ def main():
 		svgmap.add_shapefile_layer(svg_src, shp_src, data_column = data_col, outfile=options.outfile)
 		
 	elif command == "countries":
-		svgmap.render_countries(options.options.target_countries, options.target_countries, outfile=options.outfile)
+		svgmap.render_countries(options.target_countries, outfile=options.outfile)
 
 
 def list_projections():

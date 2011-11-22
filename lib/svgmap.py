@@ -583,6 +583,8 @@ class SVGMap:
 		for lat in range(0,90, options.grat_step):
 			lats = ([lat, -lat], [0])[lat == 0]
 			for lat_ in lats:
+				if lat_ < globe.minLat or lat_ > globe.maxLat:
+					continue
 				pts = []
 				lines = []
 				for lon in range(0,361,1):
@@ -614,6 +616,8 @@ class SVGMap:
 				lines = []
 				for lat in range(0,181,1):
 					lat_ = lat-90
+					if lat_ < globe.minLat or lat_ > globe.maxLat:
+						continue
 					if globe._visible(lon_, lat_):
 						x,y = view.project(globe.project(lon_, lat_))
 						pts.append(Point(x,y))

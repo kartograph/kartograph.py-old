@@ -33,6 +33,9 @@ class Proj(object):
 	"""	
 	HALFPI = math.pi * .5
 	QUARTERPI = math.pi * .25
+	
+	minLat = -90
+	maxLat = 90
 					
 	def plot(self, polygon, truncate=True):
 		points = []
@@ -158,7 +161,7 @@ class Cylindrical(Proj):
 	def world_bounds(self):
 		from gisutils import Bounds2D, Point
 		bbox = Bounds2D()
-		for lat,lon in [(0,-180),(0,180),(-90,0),(90,0)]:
+		for lat,lon in [(0,-180),(0,180),(self.minLat,0),(self.maxLat,0)]:
 			x,y = self.project(lon, lat)
 			bbox.update(Point(x,y))
 		return bbox
@@ -166,10 +169,10 @@ class Cylindrical(Proj):
 	def sea_shape(self):
 		sea = []
 		out = []
-		for lat in range(-90,90): sea.append((-180,lat))
-		for lon in range(-180,180): sea.append((lon, 90))
-		for lat in range(-90,90): sea.append((180,lat*-1))
-		for lon in range(-180,180): sea.append((lon*-1, -90))
+		for lat in range(self.minLat,self.maxLat): sea.append((-180,lat))
+		for lon in range(-180,180): sea.append((lon, self.maxLat))
+		for lat in range(self.minLat, self.maxLat): sea.append((180, lat*-1))
+		for lon in range(-180,180): sea.append((lon*-1, self.minLat))
 		for s in sea:
 			lon, lat = s
 			out.append(self.project(lon, lat))
@@ -258,7 +261,13 @@ class PseudoCylindrical(Cylindrical):
 	def __init__(self, lon0=0.0):
 		Cylindrical.__init__(self, lon0=lon0)
 
-
+	def world_bounds(self):
+		from gisutils import Bounds2D, Point
+		sea = self.sea_shape()
+		bbox = Bounds2D()
+		for s in sea:
+			bbox.update(Point(s[0],s[1]))
+		return bbox
 
 
 class NaturalEarth(PseudoCylindrical):
@@ -454,6 +463,31 @@ class WagnerV(Mollweide):
 projections['wagner5'] = WagnerV
 
 
+class Loximuthal(PseudoCylindrical):
+
+	minLat = -89
+	maxLat = 89
+
+	def __init__(self, lon0=0.0, lat0=0.0):
+		PseudoCylindrical.__init__(self, lon0=lon0)
+		self.lat0 = lat0
+		self.phi0 = rad(lat0)
+		
+	def project(self, lon, lat):
+		
+		lam = rad(lon)
+		phi = rad(lat)
+		if phi == self.phi0:
+			x = lam * math.cos(self.phi0)
+		else:
+			try:
+				x = lam * (phi - self.phi0) / (math.log(math.tan(self.QUARTERPI + phi*0.5)) - math.log(math.tan(self.QUARTERPI + self.phi0*0.5)))
+			except:
+				return None
+		y = phi - self.phi0
+		return (x,y*-1)
+
+projections['loximuthal'] = Loximuthal
 
 
 class Azimuthal(Proj):
