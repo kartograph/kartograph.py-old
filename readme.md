@@ -184,6 +184,7 @@ Command-specific parameters are:
 
 * **--layer-id** will be used as id for the layer
 * **--crop-to-layer** can be used to crop the shape to any existing layer
+* **--data-col** here you can insert the shapefiles metadata column numbers that should be included in the SVG map (e.g. "2,4")
 
 ## Advanced usage 
 
