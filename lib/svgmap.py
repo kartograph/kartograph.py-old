@@ -614,7 +614,10 @@ class SVGMap:
 			for lon_ in lons:
 				pts = []
 				lines = []
-				for lat in range(0,181,1):
+				lat_range = range(options.grat_step, 181-options.grat_step,1)
+				if lon_ % 90 == 0:
+					lat_range = range(0, 181,1)
+				for lat in lat_range:
 					lat_ = lat-90
 					if lat_ < globe.minLat or lat_ > globe.maxLat:
 						continue

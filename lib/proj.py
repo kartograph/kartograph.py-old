@@ -225,6 +225,9 @@ class CEA(Cylindrical):
 		p = super(CEA, self).toXML()
 		p['lat1'] = str(self.lat1)
 		return p
+		
+	def __str__(self):
+		return 'Proj('+self.name+', lon0=%s, lat1=%s)' % (self.lon0, self.lat1)
 
 projections['cea'] = CEA
 
@@ -255,6 +258,23 @@ class Balthasart(CEA):
 		CEA.__init__(self, lat1=50, lat0=lat0, lon0=lon0)
 
 projections['balthasart'] = Balthasart
+
+
+class Mercator(Cylindrical):
+	
+	def __init__(self, lon0=0.0, lat0=0.0):
+		Cylindrical.__init__(self, lon0=lon0)
+		self.minLat = -85
+		self.maxLat = 85
+	
+	def project(self, lon, lat):
+		lam = rad(lon)
+		phi = rad(lat*-1)
+		x = lam * 1000
+		y = math.log((1+math.sin(phi)) / math.cos(phi)) * 1000
+		return (x,y)
+		
+projections['mercator'] = Mercator
 
 
 class PseudoCylindrical(Cylindrical):
@@ -441,8 +461,8 @@ class Mollweide(PseudoCylindrical):
 		else:
 			phi *= 0.5
 		
-		x = self.cx * lam * math.cos(phi)
-		y = self.cy * math.sin(phi)
+		x = 1000 * self.cx * lam * math.cos(phi)
+		y = 1000 * self.cy * math.sin(phi)
 		return (x,y*-1)
 
 projections['mollweide'] = Mollweide
@@ -484,8 +504,15 @@ class Loximuthal(PseudoCylindrical):
 				x = lam * (phi - self.phi0) / (math.log(math.tan(self.QUARTERPI + phi*0.5)) - math.log(math.tan(self.QUARTERPI + self.phi0*0.5)))
 			except:
 				return None
-		y = phi - self.phi0
+		x *= 1000
+		y = 1000 * (phi - self.phi0)
 		return (x,y*-1)
+		
+	def toXML(self):
+		p = super(Loximuthal, self).toXML()
+		p['lat0'] = str(self.lat0)
+		return p
+
 
 projections['loximuthal'] = Loximuthal
 
@@ -543,51 +570,8 @@ class Azimuthal(Proj):
 		return 'Proj('+self.name+', lon0=%s, lat0=%s)' % (self.lon0, self.lat0)
 
 	
-		
-class Conic(Proj):
-	def __init__(self, lat0=0, lon0=0, lat1=0, lat2=0):
-		from math import radians as rad
-		self.lat0 = lat0
-		self.phi0 = rad(lat0)
-		self.lon0 = lon0
-		self.lam0 = rad(lon0)
-		self.lat1 = lat1
-		self.phi1 = rad(lat1)
-		self.lat2 = lat2
-		self.phi2 = rad(lat2)
-		
-	def _visible(self, lon, lat):
-		return (self.lat0 >= 0 and lat >= 0) or (self.lat0 < 0 and lat < 0)
-		
-	def _truncate(self, x, y):
-		return (x,y)
-		
-	def world_bounds(self):
-		from gisutils import Bounds2D, Point
-		bbox = Bounds2D()
-		for (x,y) in self.sea_shape():
-			bbox.update(Point(x,y))
-		return bbox
-		
-	def sea_shape(self):
-		sea = []
-		out = []
-		for lat in range(-90,90): sea.append((self.lon0-180,lat))
-		for lon in range(-180,180): sea.append((self.lon0+lon, 90))
-		for lat in range(-90,90): sea.append((self.lon0+180,lat*-1))
-		for lon in range(-180,180): sea.append((self.lon0 - lon, -90))
-		for s in sea:
-			lon, lat = s
-			out.append(self.project(lon, lat))
-		return out
 
-	def toXML(self):
-		p = super(Conic, self).toXML()
-		p['lon0'] = str(self.lon0)
-		p['lat0'] = str(self.lat0)
-		p['lat1'] = str(self.lat1)
-		p['lat2'] = str(self.lat2)
-		return p
+
 
 class Orthographic(Azimuthal):
 	"""
@@ -756,6 +740,53 @@ class Satellite(Azimuthal):
 projections['satellite'] = Satellite
 
 
+		
+class Conic(Proj):
+	def __init__(self, lat0=0, lon0=0, lat1=0, lat2=0):
+		from math import radians as rad
+		self.lat0 = lat0
+		self.phi0 = rad(lat0)
+		self.lon0 = lon0
+		self.lam0 = rad(lon0)
+		self.lat1 = lat1
+		self.phi1 = rad(lat1)
+		self.lat2 = lat2
+		self.phi2 = rad(lat2)
+		
+	def _visible(self, lon, lat):
+		return True
+		
+	def _truncate(self, x, y):
+		return (x,y)
+		
+	def world_bounds(self):
+		from gisutils import Bounds2D, Point
+		bbox = Bounds2D()
+		for (x,y) in self.sea_shape():
+			bbox.update(Point(x,y))
+		return bbox
+		
+	def sea_shape(self):
+		sea = []
+		out = []
+		for lat in range(self.minLat, self.maxLat): sea.append((self.lon0-180,lat))
+		for lon in range(-180,180): sea.append((self.lon0+lon, self.maxLat))
+		for lat in range(self.maxLat*-1, self.minLat*-1): sea.append((self.lon0+180,lat*-1))
+		for lon in range(-180,180): sea.append((self.lon0 - lon, self.minLat))
+		for s in sea:
+			lon, lat = s
+			out.append(self.project(lon, lat))
+		return out
+
+	def toXML(self):
+		p = super(Conic, self).toXML()
+		p['lon0'] = str(self.lon0)
+		p['lat0'] = str(self.lat0)
+		p['lat1'] = str(self.lat1)
+		p['lat2'] = str(self.lat2)
+		return p
+
+
 class LCC(Conic):
 	"""
 	Lambert Conformal Conic Projection (spherical)
@@ -774,6 +805,9 @@ class LCC(Conic):
 			self.rho0 = 0.
 		else:
 			self.rho0 = c * pow(tan(self.QUARTERPI + .5 * self.phi0), -n)
+			
+		self.minLat = -60
+		self.maxLat = 85
 		
 	def project(self, lon, lat):
 		phi = rad(lat)
@@ -784,8 +818,8 @@ class LCC(Conic):
 		else:
 			rho = self.c * math.pow(math.tan(self.QUARTERPI + 0.5 * phi), -n)
 		lam_ = (lam - self.lam0) * n
-		x = rho * math.sin(lam_)
-		y = self.rho0 - rho * math.cos(lam_)
+		x = 1000 * rho * math.sin(lam_)
+		y = 1000 * (self.rho0 - rho * math.cos(lam_))
 		
 		return (x,y*-1)
 		
