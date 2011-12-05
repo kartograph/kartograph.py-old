@@ -344,8 +344,9 @@ class Polygon(object):
 	- 'class'  for access via x = point.x, y = point.y
 	- 'point'  for access via point.x
 	"""
-	def __init__(self, id, points, mode='tuple', data=None):
+	def __init__(self, id, points, mode='tuple', data=None, closed=True):
 		self.id = id
+		self.closed = closed
 		self.bbox = Bounds2D()
 		if data != None: self.data = data
 		else: self.data = {}
@@ -385,7 +386,8 @@ class Polygon(object):
 		"""
 		ps = ''
 		pts = self.points[:]
-		pts.append(pts[0])
+		if self.closed:
+			pts.append(pts[0])
 		for pt in pts:
 			if pt.deleted: continue #ignore deleted points
 			if ps == '': ps = 'M'
@@ -394,7 +396,8 @@ class Polygon(object):
 				ps += '%d,%d' % (round(pt.x), round(pt.y))
 			else:
 				ps += '%.3f,%.3f' % (pt.x, pt.y)
-		ps += 'Z' # close path
+		if self.closed: 
+			ps += 'Z' # close path
 		return ps
 		
 	def __str__(self):
@@ -460,7 +463,7 @@ def clip_to_rect(polygon, bbox):
 	
 	outPolys = []
 	for i in range(0, len(out)):
-		outPolys.append(Polygon(polygon.id, out.contour(i), data=polygon.data))
+		outPolys.append(Polygon(polygon.id, out.contour(i), data=polygon.data, closed=polygon.closed))
 	return outPolys
 	
 	
@@ -503,14 +506,14 @@ def polygon_to_poly(polygon):
 	return Poly(pts)
 	
 
-def poly_to_polygons(poly, id='', data=None):
+def poly_to_polygons(poly, id='', data=None, closed=True):
 	out = []
 	if poly == None: return out
 	for i in range(len(poly)):
 		pts = []
 		for x,y in poly.contour(i):
 			pts.append((x,y))
-		out.append(Polygon(id, pts, data=data))
+		out.append(Polygon(id, pts, data=data, closed=closed))
 	return out
 
 	

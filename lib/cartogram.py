@@ -27,7 +27,7 @@ class Cartogram:
 			maxv = max(maxv, c.value)
 			
 		for c in self.circles:
-			c.r = math.pow((c.value - minv)/(maxv-minv), 0.25)*20
+			c.r = math.pow((c.value - minv)/(maxv-minv), 0.50)*50
 	
 	def project(self, globe):
 		# create view
@@ -38,7 +38,7 @@ class Cartogram:
 			bbox.update(gisutils.Point(x,y))
 		self.bbox = bbox
 		w = 700
-		self.view = gisutils.View(bbox, w, w*(bbox.height/bbox.width), 80)
+		self.view = gisutils.View(bbox, w, w*(bbox.height/bbox.width), 50)
 		for circle in self.circles:
 			x,y = self.view.project(globe.project(circle.lon, circle.lat))
 			circle.x = x 
@@ -49,7 +49,7 @@ class Cartogram:
 	
 	def layout(self, steps=100):
 		for i in range(steps):
-			if i % 10 == 0:
+			if i % 100 == 0:
 				self.toSVG()
 			self.layout_step()			
 	
@@ -89,7 +89,7 @@ class Cartogram:
 		h = self.view.height
 		svg = canvas(width='%dpx' % w, height='%dpx' % h, viewBox='0 0 %d %d' % (w, h), enable_background='new 0 0 %d %d' % (w, h), style='stroke-width:0.7pt; stroke-linejoin: round; stroke:#444; fill:#eee;')
 		
-		g = SVG('g', id="gemeinden")
+		g = SVG('g', id="states")
 		
 		
 		for circle in self.circles:
@@ -112,8 +112,9 @@ class Cartogram:
 		meta.append(views)
 		svg.append(meta)
 		svg.append(g)
-			
-		svg.save('cartogram.svg')
+		
+		svg.firefox()
+		#svg.save('cartogram.svg')
 		
 		
 				

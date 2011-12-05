@@ -58,8 +58,10 @@ class SVGMap:
 		self.shp_src = {}
 		self.shp_src['countries'] = self.options.data_path + 'shp/ne_10m_admin_0_countries'
 		self.shp_src['regions'] = self.options.data_path + 'shp/ne_10m_admin_1_states_provinces_shp'
+		self.shp_src['lakes'] = self.options.data_path + 'shp/ne_10m_lakes.shp'
 		
 		self.load_shape_records()
+		self.init_lake_polygons()
 		
 
 	def load_shape_records(self):
@@ -208,6 +210,79 @@ class SVGMap:
 		return bbox
 
 
+	def get_region_rec(self, iso3, region):
+		"""
+		get bounding box for region
+		focusRegion = (7,'DE.BW')
+		"""
+		shapes = self.get_country_region_indices(iso3)
+		index,value = focusRegion
+		for s in shapes:
+			rec = self.sf_recs['regions'][s]
+			if rec[index] == value:
+				return rec
+	
+	
+	def get_region_shape(self, iso3, region):
+		"""
+		get bounding box for region
+		focusRegion = (7,'DE.BW')
+		"""
+		shapes = self.get_country_region_indices(iso3)
+		index,value = region
+		for s in shapes:
+			rec = self.sf_recs['regions'][s]
+			if rec[index] == value:
+				return self.get_shape('regions', s)
+				
+
+	def get_region_bbox(self, iso3, globe, region):
+		"""
+		get bounding box for region
+		focusRegion = (7,'DE.BW')
+		"""
+		
+		shp = self.get_region_shape(iso3, region)
+		parts = shp.parts[:]
+		parts.append(len(shp.points))
+		
+		bbox = Bounds2D()
+		for j in range(0,len(parts)-1):
+			pts = shp.points[parts[j]:parts[j+1]]
+			lonlat = []
+			for k in range(0,len(pts)):
+				lonlat.append((pts[k][0], pts[k][1]))
+			mpoints = globe.plot(lonlat)
+			
+			for points in mpoints:
+				for xy in points:
+					pt = Point(xy[0], xy[1])
+					bbox.update(pt)
+		return bbox
+	
+	
+	def get_region_center(self, iso3, globe):
+		"""
+		get bounding box for region
+		focusRegion = (7,'DE.BW')
+		"""
+		
+		shp = get_region_shape(iso3, region)
+		bbox = Bounds2D()
+		for j in range(0,len(parts)-1):
+			pts = shape.points[parts[j]:parts[j+1]]
+			lonlat = []
+			for k in range(0,len(pts)):
+				lonlat.append((pts[k][0], pts[k][1]))
+			mpoints = globe.plot(lonlat)
+			
+			for points in mpoints:
+				for xy in points:
+					pt = Point(xy[0], xy[1])
+					bbox.update(pt)
+		return bbox
+	
+
 	def init_svg_canvas(self, view, bbox, globe):
 		"""
 		prepare a blank new svg file
@@ -245,31 +320,33 @@ class SVGMap:
 
 	def get_shape_polygons(self, shp, id, globe, view, data=None):
 		"""
-		formerly known as self.get_shape_polygons
 		projects a shapefile shape and returns a list of polygons
 		"""
-		parts = shp.parts[:]
-		parts.append(len(shp.points))
 		polys = []
-		if data is None: data = {}
-		errs = 0
-		for j in range(0,len(parts)-1):
-			pts = shp.points[parts[j]:parts[j+1]]
-			lonlat = []
-			for k in range(0,len(pts)):
-				lonlat.append((pts[k][0],pts[k][1]))
-			
-			mpoints = globe.plot(lonlat)
-			if mpoints == None: continue
-			for points in mpoints:
-				poly_points = []
-				for xy in points:
-					if xy != None:
-						poly_points.append(view.project(Point(xy[0], xy[1])))
-					else: errs += 1
-				polygon = Polygon(id, poly_points, mode='point', data=data)
-				if polygon != None:
-					polys.append(polygon)
+		if shp.shapeType in (3,5):
+			parts = shp.parts[:]
+			parts.append(len(shp.points))
+			if data is None: data = {}
+			errs = 0
+			for j in range(0,len(parts)-1):
+				pts = shp.points[parts[j]:parts[j+1]]
+				lonlat = []
+				for k in range(0,len(pts)):
+					lonlat.append((pts[k][0],pts[k][1]))
+				
+				mpoints = globe.plot(lonlat)
+				if mpoints == None: continue
+				for points in mpoints:
+					poly_points = []
+					for xy in points:
+						if xy != None:
+							poly_points.append(view.project(Point(xy[0], xy[1])))
+						else: errs += 1
+					polygon = Polygon(id, poly_points, mode='point', data=data, closed=shp.shapeType == 5)
+					if polygon != None:
+						polys.append(polygon)
+		else:
+			print shp.shapeType
 		return polys
 
 
@@ -301,6 +378,8 @@ class SVGMap:
 			for j in reg_indices:
 				rec = region_recs[j]
 				shp = self.get_shape('regions', j)
+				clon,clat = gisutils.shape_center(shp)
+				print '%s\t%f\t%f' % (rec[7],clon,clat)
 				polys += self.get_shape_polygons(shp, iso3, globe, view, data=self.get_polygon_data(rec, regions=True))
 		else:
 			shp = self.get_country_shape(iso3)
@@ -837,7 +916,7 @@ class SVGMap:
 				render_country(iso3, outfile=outfile, regions=(command == "regions"))
 				
 		
-	def render_country(self, iso3, regions=False, outfile=None):
+	def render_country(self, iso3, regions=False, outfile=None, focusRegion=None):
 		"""
 		renders a single country or its regions
 		"""
@@ -847,12 +926,25 @@ class SVGMap:
 		options = self.options
 		
 		proj_opts = options.proj_opts.copy()
-		center_lon, center_lat = self.get_country_center(shp, iso3=iso3)	
+			
+		if focusRegion == None:
+			shp = self.get_country_shape(iso3) # get center shape
+			center_lon, center_lat = self.get_country_center(shp, iso3=iso3)	
+		else:
+			shp2 = self.get_region_shape(iso3, focusRegion)
+			center_lon, center_lat = gisutils.shape_center(shp2)	
+			print center_lon, center_lat
+		
 		if not options.force_lat0: proj_opts['lat0'] = center_lat
 		if not options.force_lon0: proj_opts['lon0'] = center_lon
 		
-		globe = options.projection(**proj_opts)	
-		bbox = self.get_country_bbox(iso3, globe)
+		# initialize projection, use center lat/lng from shape record as center
+		globe = options.projection(**proj_opts)
+	
+		if focusRegion == None:
+			bbox = self.get_country_bbox(iso3, globe)	
+		else:
+			bbox = self.get_region_bbox(iso3, globe, focusRegion)
 		
 		view = self.get_view(bbox)
 		viewbox = Bounds2D(width=view.width, height=view.height)	
@@ -882,22 +974,32 @@ class SVGMap:
 		self.save_or_display(svg, iso3, outfile)
 	
 	
-	def render_country_and_context(self, iso3, regions=False, outfile=None):
+	def render_country_and_context(self, iso3, regions=False, outfile=None, focusRegion=None):
 		"""
 		renders a country with surrounding countries
 		"""
 		options = self.options
 		
-		shp = self.get_country_shape(iso3) # get center shape
-		
-		# initialize projection, use center lat/lng from shape record as center
 		proj_opts = options.proj_opts.copy()
-		center_lon, center_lat = self.get_country_center(shp, iso3=iso3)	
+			
+		if focusRegion == None:
+			shp = self.get_country_shape(iso3) # get center shape
+			center_lon, center_lat = self.get_country_center(shp, iso3=iso3)	
+		else:
+			shp = self.get_region_shape(iso3, focusRegion)
+			center_lon, center_lat = gisutils.shape_center(shp)	
+			print center_lon, center_lat
+		
 		if not options.force_lat0: proj_opts['lat0'] = center_lat
 		if not options.force_lon0: proj_opts['lon0'] = center_lon
+		
+		# initialize projection, use center lat/lng from shape record as center
 		globe = options.projection(**proj_opts)
 	
-		bbox = self.get_country_bbox(iso3, globe)
+		if focusRegion == None:
+			bbox = self.get_country_bbox(iso3, globe)	
+		else:
+			bbox = self.get_region_bbox(iso3, globe, focusRegion)		
 		
 		# calculate view
 		view = self.get_view(bbox)
@@ -1018,9 +1120,9 @@ class SVGMap:
 					polygons.append(poly)
 		
 		
-		self.simplify_polygons(polygons)
+		#self.simplify_polygons(polygons)
 		
-		polygons = self.clip_polygons(polygons, viewbox)
+		#polygons = self.clip_polygons(polygons, viewbox)
 		
 		if layer_poly != None:
 			from gisutils import polygon_to_poly, poly_to_polygons
@@ -1029,10 +1131,10 @@ class SVGMap:
 				poly = polygon_to_poly(polygon)
 				poly_ = poly & layer_poly
 				if poly_ != None:
-					out += poly_to_polygons(poly_, id=polygon.id, data=polygon.data)
+					out += poly_to_polygons(poly_, id=polygon.id, data=polygon.data, closed=polygon.closed)
 			polygons = out
 			
-		self.add_map_layer(svg, polygons, 'layer', polycolor=polycolor)
+		self.add_map_layer(svg, polygons, options.layer_id, polycolor=polycolor)
 		
 		self.save_or_display(svg, "", outfile)
 		
@@ -1055,6 +1157,17 @@ class SVGMap:
 			svg.firefox()
 
 
+	def init_lake_polygons(self):
+		"""
+		"""
+		recs = self.sf_recs['lakes']
+		self.lake_polys = []
+		for i in range(len(recs)):
+			rec = recs[i]
+			if rec[1] < 2:
+				#shp = self.get_shape('lakes', i)
+				#self.lake_po
+				pass
 
 
 
@@ -1140,12 +1253,14 @@ class SVGMapOptions(object):
 			self.out_padding = dp
 
 		if self.projection is None:
-			if command in ("country","regions","countries"):
+			if command in ("country","regions","countries","region"):
 				self.projection = proj.LAEA		
 				print "LAEA"
 			else:
 				self.projection = proj.NaturalEarth
-			
+		
+		if self.layer_id == None:
+			self.layer_id = 'layer'
 
 
 

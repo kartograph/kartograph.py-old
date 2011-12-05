@@ -678,7 +678,8 @@ class Satellite(Azimuthal):
 		self.dist = dist
 		self.up = up
 		self.up_ = math.radians(up)
-		self.tilt = math.radians(tilt)
+		self.tilt = tilt
+		self.tilt_ = math.radians(tilt)
 		
 		self.scale = 1
 		xmin = sys.maxint
@@ -709,14 +710,16 @@ class Satellite(Azimuthal):
 		yo = -self.r * k * ( cos(self.phi0)*sin(phi) - sin(self.phi0)*cos(phi)*cos(lam - self.lam0) )
 		
 		# rotate
+		tilt = self.tilt_
+		
 		cos_up = cos(self.up_)
 		sin_up = sin(self.up_)
-		cos_tilt = cos(self.tilt)
-		sin_tilt = sin(self.tilt)
+		cos_tilt = cos(tilt)
+		sin_tilt = sin(tilt)
 		
 		H = self.r * (self.dist - 1)
-		A = ((yo * cos_up + xo * sin_up) * sin(self.tilt/H)) + cos_tilt
-		xt = (xo * cos_up - yo * sin_up) * cos(self.tilt/A)
+		A = ((yo * cos_up + xo * sin_up) * sin(tilt/H)) + cos_tilt
+		xt = (xo * cos_up - yo * sin_up) * cos(tilt/A)
 		yt = (yo * cos_up + xo * sin_up) / A
 		
 		x = self.r + xt
@@ -735,8 +738,15 @@ class Satellite(Azimuthal):
 		p = super(Satellite, self).toXML()
 		p['dist'] = str(self.dist)
 		p['up'] = str(self.up)
+		p['tilt'] = str(self.tilt)
 		return p
 
+	def _truncate(self, x, y):
+		theta = math.atan2(y-self.r,x-self.r)
+		x1 = self.r + self.r * math.cos(theta)
+		y1 = self.r + self.r * math.sin(theta)
+		return (x1,y1)
+		
 projections['satellite'] = Satellite
 
 

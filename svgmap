@@ -59,7 +59,12 @@ def main():
 		
 	elif command == "region":
 		iso3 = options.target_countries[0]
-		svgmap.render_region(iso3, outfile=options.outfile)
+		out = options.outfile
+		
+		if options.add_context:
+			svgmap.render_country_and_context(iso3, outfile=out, regions=True, focusRegion=options.focus_region)	
+		else:
+			svgmap.render_country(iso3, outfile=out, regions=True, focusRegion=options.focus_region)
 		
 	elif command == "layer":
 		svg_src = options.svg_src
@@ -102,7 +107,7 @@ def parse_args():
 	# parse options
 	# global options
 	opt_str = "o:w:h:r:p:q:sfvg:"
-	long_opt = ['output=', 'width=', 'height=', 'ratio=', 'padding=', 'quality=', 'sea', 'force-overwrite', 'context-quality=', 'verbose', 'proj=','list-projections','graticule=','round-coordinates','lon0=','lat0=','lat1=','lat2=','dist=','up=']
+	long_opt = ['output=', 'width=', 'height=', 'ratio=', 'padding=', 'quality=', 'sea', 'force-overwrite', 'context-quality=', 'verbose', 'proj=','list-projections','graticule=','round-coordinates','lon0=','lat0=','lat1=','lat2=','dist=','up=', 'tilt=']
 
 	if command == "world":
 		long_opt += []
@@ -144,6 +149,16 @@ def parse_args():
 			options.svg_src = sys.argv[2]
 			options.shapefile_src = sys.argv[3]
 			cmd_args = sys.argv[4:]
+			
+	if command == "region":
+		if len(sys.argv) < 5:
+			print "\nError: wrong number of arguments\n\n"+os.path.basename(sys.argv[0])+' '+command+' ISO3 REC-COLUMN REC-COLUMN-VALUE'
+		else:
+			options.target_countries = [sys.argv[2]]
+			options.focus_region = (int(sys.argv[3]), sys.argv[4])
+			cmd_args = sys.argv[5:]
+			long_opt += ['context']
+			opt_str += "c"
 	
 	try:
 		opts, args = getopt.getopt(cmd_args, opt_str, long_opt)
@@ -218,6 +233,8 @@ def parse_args():
 				options.proj_opts['dist'] = float(a)
 			elif o == '--up':
 				options.proj_opts['up'] = float(a)
+			elif o == '--tilt':
+				options.proj_opts['tilt'] = float(a)
 			
 
 		options.applyDefaults(command)
