@@ -344,9 +344,10 @@ class Polygon(object):
 	- 'class'  for access via x = point.x, y = point.y
 	- 'point'  for access via point.x
 	"""
-	def __init__(self, id, points, mode='tuple', data=None, closed=True):
+	def __init__(self, id, points, mode='tuple', data=None, closed=True, isHole=False):
 		self.id = id
 		self.closed = closed
+		self.isHole = isHole
 		self.bbox = Bounds2D()
 		if data != None: self.data = data
 		else: self.data = {}
@@ -402,7 +403,53 @@ class Polygon(object):
 		
 	def __str__(self):
 		return '<Polygon ('+str(len(self.points))+' points)>'
+		
+	def area(self):
+		a = 0
+		pts = self.points
+		for i in range(len(pts)-1):
+			p0 = pts[i]
+			p1 = pts[i+1]
+			a += p0.x*p1.y - p1.x*p0.y
+		return abs(a)*.5
+		
+		
+class MPolygon:
+	"""
+	this class will eventually stop the mess with Polygon classes
+	
+	"""
+	def __init__(self, id, points, mode='tuple', data=None):
+		from Polygon import Polygon as Poly
+		self.poly = Poly()
+		
+	def __str__(self):
+		return '<M;Polygon ('+str(len(self.points))+' points)>'
 
+
+	def svgPathString(self, useInt=True):
+		"""
+		returns the path string representation of this polygon
+		"""
+		ps = ''
+		pts = self.points[:]
+		if self.closed:
+			pts.append(pts[0])
+		for pt in pts:
+			if pt.deleted: continue #ignore deleted points
+			if ps == '': ps = 'M'
+			else: ps += 'L'
+			if useInt:
+				ps += '%d,%d' % (round(pt.x), round(pt.y))
+			else:
+				ps += '%.3f,%.3f' % (pt.x, pt.y)
+		if self.closed: 
+			ps += 'Z' # close path
+		return ps
+		
+
+	def area(self):
+		return self.poly.area()
 	
 class View(object):
 	"""
@@ -497,16 +544,22 @@ def getPolygons(shp, id, proj, view):
 	
 def polygon_to_poly(polygon):
 	"""
-	computes the center of gravity of a shapefile multi-polygon
+	converts a gisutils.Polygon to Polygon.Polygon
 	"""
 	from Polygon import Polygon as Poly
 	pts = []
 	for pt in polygon.points:
+		if pt.deleted: continue
 		pts.append((pt.x, pt.y))
+	if len(pts) < 3:
+		return None
 	return Poly(pts)
 	
 
 def poly_to_polygons(poly, id='', data=None, closed=True):
+	"""
+	converts a Polygon.Polygon to multiple gisutils.Polygon
+	"""
 	out = []
 	if poly == None: return out
 	for i in range(len(poly)):

@@ -32,7 +32,7 @@ country_min_area['CAN'] = .05
 country_min_area['ALA'] = .1
 country_min_area['FRA'] = .2
 country_min_area['DNK'] = .1
-country_min_area['ITA'] = .1
+country_min_area['ITA'] = .05
 country_min_area['GBR'] = .165
 country_min_area['ESP'] = .165
 
@@ -61,7 +61,6 @@ class SVGMap:
 		self.shp_src['lakes'] = self.options.data_path + 'shp/ne_10m_lakes.shp'
 		
 		self.load_shape_records()
-		self.init_lake_polygons()
 		
 
 	def load_shape_records(self):
@@ -318,7 +317,7 @@ class SVGMap:
 		return svg
 
 
-	def get_shape_polygons(self, shp, id, globe, view, data=None):
+	def get_shape_polygons(self, shp, id, globe, view, data=None, holes=False):
 		"""
 		projects a shapefile shape and returns a list of polygons
 		"""
@@ -334,6 +333,7 @@ class SVGMap:
 				for k in range(0,len(pts)):
 					lonlat.append((pts[k][0],pts[k][1]))
 				
+				
 				mpoints = globe.plot(lonlat)
 				if mpoints == None: continue
 				for points in mpoints:
@@ -342,7 +342,7 @@ class SVGMap:
 						if xy != None:
 							poly_points.append(view.project(Point(xy[0], xy[1])))
 						else: errs += 1
-					polygon = Polygon(id, poly_points, mode='point', data=data, closed=shp.shapeType == 5)
+					polygon = Polygon(id, poly_points, mode='point', data=data, closed=shp.shapeType == 5, isHole=holes)
 					if polygon != None:
 						polys.append(polygon)
 		else:
@@ -798,6 +798,10 @@ class SVGMap:
 		
 		polygons = self.get_polygons_world(globe, view)
 		self.simplify_polygons(polygons)
+		
+		if options.cut_lakes:
+			polygons = self.cut_lakes(polygons, globe, view, viewbox)
+		
 		self.add_map_layer(svg, polygons, 'countries', groupBy='iso')
 		self.save_or_display(svg, 'worldmap', outfile)
 	
@@ -967,6 +971,9 @@ class SVGMap:
 		
 		self.simplify_polygons(polygons)
 		
+		if options.cut_lakes:
+			polygons = self.cut_lakes(polygons, globe, view, viewbox)
+		
 		polygons = self.clip_polygons(polygons, viewbox)
 		
 		self.add_map_layer(svg, polygons, iso3, groupBy=('iso','oid')[regions])
@@ -1025,6 +1032,9 @@ class SVGMap:
 		_context = lambda p: p.id != iso3
 		
 		self.simplify_polygons(polygons, focusFilter=_focus)
+		
+		if options.cut_lakes:
+			polygons = self.cut_lakes(polygons, globe, view, viewbox)
 		
 		polygons = self.clip_polygons(polygons, viewbox)
 		
@@ -1119,10 +1129,14 @@ class SVGMap:
 				if poly.bbox.intersects(viewbox):
 					polygons.append(poly)
 		
+		polygons = self.merge_biggest_polygons(polygons, 400)
 		
-		#self.simplify_polygons(polygons)
+		self.simplify_polygons(polygons)
 		
-		#polygons = self.clip_polygons(polygons, viewbox)
+		if options.cut_lakes:
+			polygons = self.cut_lakes(polygons, globe, view, viewbox)
+		
+		polygons = self.clip_polygons(polygons, viewbox)
 		
 		if layer_poly != None:
 			from gisutils import polygon_to_poly, poly_to_polygons
@@ -1133,6 +1147,8 @@ class SVGMap:
 				if poly_ != None:
 					out += poly_to_polygons(poly_, id=polygon.id, data=polygon.data, closed=polygon.closed)
 			polygons = out
+			
+		
 			
 		self.add_map_layer(svg, polygons, options.layer_id, polycolor=polycolor)
 		
@@ -1157,17 +1173,66 @@ class SVGMap:
 			svg.firefox()
 
 
-	def init_lake_polygons(self):
+	def get_lake_polygons(self, globe, view, viewbox):
 		"""
 		"""
 		recs = self.sf_recs['lakes']
-		self.lake_polys = []
+		lake_polys = []
 		for i in range(len(recs)):
 			rec = recs[i]
-			if rec[1] < 2:
-				#shp = self.get_shape('lakes', i)
-				#self.lake_po
-				pass
+			if rec[1] < 1:
+				shp = self.get_shape('lakes', i)
+				lakes = self.get_shape_polygons(shp, 'lakes', globe, view, reverse=True)
+				for lake in lakes:
+					if lake.bbox.intersects(viewbox): # check if polygon intersects view
+						lake_polys.append(lake)
+		return lake_polys
+	
+	
+	def cut_lakes(self, polygons, globe, view, viewbox):
+		"""
+		cuts lake polygons out of country polygons
+		"""
+		from gisutils import poly_to_polygons, polygon_to_poly
+		
+		if self.options.verbose:
+			print "cutting out lakes"
+		
+		lakes = self.get_lake_polygons(globe, view, viewbox)
+		
+		self.simplify_polygons(lakes)
+		
+		lake_polys = []
+		for lake in lakes:
+			lake_poly = polygon_to_poly(lake)
+			if lake_poly is not None:
+				lake_polys.append(lake_poly)
+		
+		out = []
+		for polygon in polygons:
+			poly = polygon_to_poly(polygon)
+			if poly is None:
+				continue
+			for lake in lake_polys:
+				poly = poly - lake
+			out += poly_to_polygons(poly, id=polygon.id, data=polygon.data, closed=polygon.closed)
+		return out
+		
+		
+	def merge_biggest_polygons(self, polygons, area_thresh=1000):
+		out = []
+		join = []
+		
+		for poly in polygons:
+			area = poly.area()
+			if area < area_thresh:
+				out.append(poly)
+			else:
+				join.append(poly)
+				
+		out += gisutils.merge_polygons(join)
+			
+		return out
 
 
 
@@ -1216,6 +1281,8 @@ class SVGMapOptions(object):
 		self.proj_opts = { 'lat0': 0, 'lon0': 0 }
 		self.force_lat0 = False
 		self.force_lon0 = False
+		
+		self.cut_lakes = False
 	
 	
 	def applyDefaults(self, command=""):

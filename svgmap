@@ -106,8 +106,8 @@ def parse_args():
 	
 	# parse options
 	# global options
-	opt_str = "o:w:h:r:p:q:sfvg:"
-	long_opt = ['output=', 'width=', 'height=', 'ratio=', 'padding=', 'quality=', 'sea', 'force-overwrite', 'context-quality=', 'verbose', 'proj=','list-projections','graticule=','round-coordinates','lon0=','lat0=','lat1=','lat2=','dist=','up=', 'tilt=']
+	opt_str = "o:w:h:r:p:q:sfvg:l"
+	long_opt = ['output=', 'width=', 'height=', 'ratio=', 'padding=', 'quality=', 'sea', 'force-overwrite', 'context-quality=', 'verbose', 'proj=','list-projections','graticule=','round-coordinates','lon0=','lat0=','lat1=','lat2=','dist=','up=', 'tilt=', 'cut-lakes']
 
 	if command == "world":
 		long_opt += []
@@ -200,11 +200,10 @@ def parse_args():
 				options.grat_step = int(a)
 			elif o == '--round-coordinates':
 				options.round_coordinates = True
-			elif o in ('--graticule', '-g'):
-				options.graticule = True
 			elif o == "--data-col":
 				options.layer_data_column = map(int, a.split(','))
-			
+			elif o in ('--cut-lakes', '-l'):
+				options.cut_lakes = True
 			
 			# projection options
 			elif o == '--list-projections':
