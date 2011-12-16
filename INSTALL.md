@@ -15,9 +15,8 @@ One of the following should work
 
 ### Polygon
 
-Unfortunately, the original maintainer of this library.
+Unfortunately, the original maintainer of this library has taken offline his site. But you still can download the Mac package from here:
 
-download from here
 http://pypi.python.jp/Polygon/Polygon-2.0.4.macosx-10.6-universal.tar.gz#md5=302abdd94b25ccd5e3a7cbbd7635d777
 
 and copy the folder "Polygon" into
@@ -26,6 +25,7 @@ and copy the folder "Polygon" into
 
 ### SvgFig
 Follow instructions here:
+
 http://code.google.com/p/svgfig/wiki/HowToInstall
 
 ## Download svgmap.py
@@ -53,18 +53,16 @@ Download them into your svgmap.py/ directory and unzip them via
 
 You can safely replace any files.
 
-You may need the **7z** archive utility
+You may need to install the **7z** archive utility
 
 	brew install p7zip
 
 ## Test installation
 
-cd svgmap.py
-python svgmap world -o world.svg
+	cd svgmap.py
+	python svgmap world -o world.svg
 
-If you want to open generated maps automatically, add the following script into 
-
-/usr/local/bin/firefox
+If you want to open generated maps automatically, save the following script to /usr/local/bin/firefox
 
 	#!/bin/sh
 	open -a /Applications/Browser/Firefox.app $1
@@ -77,5 +75,10 @@ If you then run svgmap without the -o parameter, the map would automatically ope
 
 	python svgmap world
 
+If you don't want to type that "python " prefix you can run
+
+	chmod +x svgmap
+	export PATH=$PATH:.
+	svgmap world
 
 
