@@ -819,6 +819,8 @@ class SVGMap:
 			targets.append(shprec)
 			
 		proj_opts = options.proj_opts.copy()
+		
+		
 			
 		if not options.force_lat0 or not options.force_lon0:
 			# get shape centers and use mean center as map center
@@ -865,8 +867,17 @@ class SVGMap:
 		# render every country that intersects the view
 		polygons = self.get_polygons_countries(viewBox, view, globe)
 		self.simplify_polygons(polygons)
+		
+		if options.cut_lakes:
+			polygons = self.cut_lakes(polygons, globe, view, viewBox)
+		
 		polygons = self.clip_polygons(polygons, viewBox)
-		self.add_map_layer(svg, polygons, 'countries', groupBy='iso')
+		
+		_focus = lambda p: p.id in target_iso3s
+		_context = lambda p: p.id not in target_iso3s
+		
+		self.add_map_layer(svg, polygons, 'context', groupBy='iso', filter=_context)
+		self.add_map_layer(svg, polygons, 'countries', groupBy='iso', filter=_focus)
 		
 		# save and exit
 		self.save_or_display(svg, '-'.join(target_iso3s), outfile)

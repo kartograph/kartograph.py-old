@@ -30,6 +30,7 @@ def usage():
 	print 'Possible commands are:\n'
 	
 	print '   country      renders country boundary'
+	print '   countries    ""'
 	print '   regions      renders all admin-level 1 regions of a country'
 	print '   region       renders a single admin-level 1 region of a country'
 	print '   world        renders world map'
@@ -144,6 +145,7 @@ def parse_args():
 	if command == "layer":
 		if len(sys.argv) < 4:
 			print "\nError: you must provide a svg-map and a shapefile\n\n"+os.path.basename(sys.argv[0])+' '+command+' SVGMAP.svg SHAPEFILE'
+			sys.exit(2)
 		else:
 			long_opt += ['layer-id=', 'crop-at-layer=', 'data-col=']
 			options.svg_src = sys.argv[2]
@@ -153,6 +155,7 @@ def parse_args():
 	if command == "region":
 		if len(sys.argv) < 5:
 			print "\nError: wrong number of arguments\n\n"+os.path.basename(sys.argv[0])+' '+command+' ISO3 REC-COLUMN REC-COLUMN-VALUE'
+			sys.exit(2)
 		else:
 			options.target_countries = [sys.argv[2]]
 			options.focus_region = (int(sys.argv[3]), sys.argv[4])
