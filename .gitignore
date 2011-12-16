@@ -6,3 +6,6 @@ data/shp/*.dbf
 data/shp/*.prj
 data/shp/*.shx
 tmp.svg
+tmp/
+doc/
+data/shp/
