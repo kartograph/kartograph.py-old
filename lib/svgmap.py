@@ -948,7 +948,6 @@ class SVGMap:
 		else:
 			shp2 = self.get_region_shape(iso3, focusRegion)
 			center_lon, center_lat = gisutils.shape_center(shp2)	
-			print center_lon, center_lat
 		
 		if not options.force_lat0: proj_opts['lat0'] = center_lat
 		if not options.force_lon0: proj_opts['lon0'] = center_lon
@@ -1006,7 +1005,6 @@ class SVGMap:
 		else:
 			shp = self.get_region_shape(iso3, focusRegion)
 			center_lon, center_lat = gisutils.shape_center(shp)	
-			print center_lon, center_lat
 		
 		if not options.force_lat0: proj_opts['lat0'] = center_lat
 		if not options.force_lon0: proj_opts['lon0'] = center_lon
@@ -1093,10 +1091,11 @@ class SVGMap:
 		
 		view = self.get_view(bbox)
 		viewbox = Bounds2D(width=view.width, height=view.height)
-			
-		print view
-		print viewbox
-		print globe
+
+		if options.verbose:			
+			print view
+			print viewbox
+			print globe
 			
 		# eventually crop at layer
 		layer_poly = None
@@ -1105,10 +1104,12 @@ class SVGMap:
 			from Polygon.IO import writeSVG
 			from gisutils import restore_poly_from_path_str
 			
-			print 'crop at layer "%s"' %  options.crop_at_layer
+			if options.verbose:
+				print 'crop at layer "%s"' %  options.crop_at_layer
 			for g in svg[2:]:
 				if g['id'] == options.crop_at_layer:
-					print 'found layer!'
+					if options.verbose:
+						print 'found layer!'
 					# restore polygons from that layer
 					layer_poly = Poly()
 					for path in g[:]:
@@ -1193,7 +1194,7 @@ class SVGMap:
 			rec = recs[i]
 			if rec[1] < 1:
 				shp = self.get_shape('lakes', i)
-				lakes = self.get_shape_polygons(shp, 'lakes', globe, view, reverse=True)
+				lakes = self.get_shape_polygons(shp, 'lakes', globe, view)
 				for lake in lakes:
 					if lake.bbox.intersects(viewbox): # check if polygon intersects view
 						lake_polys.append(lake)
@@ -1307,7 +1308,7 @@ class SVGMapOptions(object):
 		ratio = self.out_ratio
 	
 		if ow == None and oh == None:
-			ow = 500
+			ow = 900
 			
 		if ow != None and oh != None:
 			self.force_ratio = True

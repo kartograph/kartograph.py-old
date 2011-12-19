@@ -272,9 +272,7 @@ def smartBounds(shape, proj, thresh=0.25):
 				max_lat = lat
 				max_lat_lon = lon
 	pts = [(min_lon, min_lon_lat), (max_lon, max_lon_lat), (min_lat_lon, min_lat), (max_lat_lon, max_lat)]
-	
-	print pts
-	
+		
 	xmin = ymin = sys.maxint
 	xmax = ymax = sys.maxint * -1
 	
@@ -566,6 +564,7 @@ def poly_to_polygons(poly, id='', data=None, closed=True):
 		pts = []
 		for x,y in poly.contour(i):
 			pts.append((x,y))
+		#if poly.isHole(i): pts.reverse()
 		out.append(Polygon(id, pts, data=data, closed=closed))
 	return out
 

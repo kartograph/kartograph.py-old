@@ -750,6 +750,37 @@ class Satellite(Azimuthal):
 projections['satellite'] = Satellite
 
 
+class EquidistantAzimuthal(Azimuthal):
+	"""
+	Equidistant Azimuthal projection
+	
+	implementation taken from 
+	Snyder, Map projections - A working manual
+	"""
+	def __init__(self,lat0=0.0,lon0=0.0):
+		Azimuthal.__init__(self, lat0, lon0)		
+		
+	def project(self, lon, lat):
+		from math import radians as rad, pow, asin, cos, sin
+		
+		phi = rad(lat)
+		lam = rad(lon)
+
+		cos_c = sin(self.phi0) * sin(phi) + cos(self.phi0) * cos(phi) * cos(lam - self.lam0)
+		c = math.acos(cos_c)
+		k = 0.325 * c/sin(c)
+		
+		xo = self.r * k * cos(phi) * sin(lam - self.lam0)
+		yo = -self.r * k * ( cos(self.phi0)*sin(phi) - sin(self.phi0)*cos(phi)*cos(lam - self.lam0) )
+		
+		x = self.r + xo
+		y = self.r + yo
+		
+		return (x,y)
+
+projections['equi'] = EquidistantAzimuthal
+
+
 		
 class Conic(Proj):
 	def __init__(self, lat0=0, lon0=0, lat1=0, lat2=0):
