@@ -1311,6 +1311,7 @@ class SVGMapOptions(object):
 		self.target_countries = None
 		self.sea_layer = False
 		
+		self.llbbox = None
 		self.projection = None
 		self.force_proj = False
 		
