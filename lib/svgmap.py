@@ -546,20 +546,34 @@ class SVGMap:
 		clip polygons to viewbox
 		"""
 		options = self.options
-		if options.verbose: print "clipping and rendering"
+		if options.verbose: print "clipping"
 		
 		new_polygons = []
 		
 		for polygon in polygons:
-			if polygon.id == '--': continue
-		
+			if polygon.id == '--': continue	
 			# clip polygon, this may either remove or split the polygon
-			clipped = gisutils.clip_to_rect(polygon, viewbox)	
-				
+			clipped = gisutils.clip_to_rect(polygon, viewbox)			
 			new_polygons += clipped
 
 		return new_polygons
 
+
+	def clip_polygons_to_sea(self, polygons, globe, view):
+		options = self.options
+		if options.verbose: print "clipping"
+		
+		sea_pts = self.get_sea_points(globe, view)
+		
+		new_polygons = []
+		
+		for polygon in polygons:
+			if polygon.id == '--': continue	
+			# clip polygon, this may either remove or split the polygon
+			clipped = gisutils.clip_to_poly_pts(polygon, sea_pts)			
+			new_polygons += clipped
+		return new_polygons
+	
 
 	def group_polygons(self, polygons, groupBy):
 		"""
@@ -629,18 +643,21 @@ class SVGMap:
 				for key in poly.data:
 					svg_path['data-'+key] = poly.data[key]
 				svgGroup.append(svg_path)
-	
 
-	def add_sea_layer(self, svg, globe, view, viewbox):
-		
-		from svgfig import SVG
-		
-		sea = globe.sea_shape()
+
+	def get_sea_points(self, globe, view):
+		sea = globe.sea_shape(self.options.llbbox)
 		sea_pts = []
 		for s in sea:
 			x,y = view.project(s)	
 			sea_pts.append(Point(x,y))
-			
+		return sea_pts
+		
+
+	def add_sea_layer(self, svg, globe, view, viewbox):
+		from svgfig import SVG
+		
+		sea_pts = self.get_sea_points(globe, view)	
 		sea_polys = self.clip_polygons([Polygon('sea', sea_pts, mode='point')], viewbox)	
 		g = SVG('g', id='sea')
 		svg.append(g)
@@ -656,18 +673,35 @@ class SVGMap:
 		
 		options = self.options
 		lon0 = options.proj_opts['lon0']
+		llbbox = options.llbbox
 		
+		minLat = max(globe.minLat, options.llbbox[1])
+		maxLat = min(globe.maxLat, options.llbbox[3])
+		minLon = options.llbbox[0]
+		maxLon = options.llbbox[2]
+		
+		#print minLon, maxLon, minLat, maxLat
+		
+		def xfrange(start, stop, step):
+			while (step > 0 and start < stop) or (step < 0 and start > step):
+				yield start
+				start += step
+
 		g = SVG('g', id='graticule')
 		svg.append(g)
-		for lat in range(0,90, options.grat_step):
+		for lat in xfrange(0,90, options.grat_step):
 			lats = ([lat, -lat], [0])[lat == 0]
 			for lat_ in lats:
-				if lat_ < globe.minLat or lat_ > globe.maxLat:
+				if lat_ < minLat or lat_ > maxLat:
 					continue
+				
 				pts = []
 				lines = []
-				for lon in range(0,361,1):
+				for lon in xfrange(0,361,1):
 					lon_ = lon-180
+					if lon_ < minLon or lon_ > maxLon:
+						continue
+					
 					if globe._visible(lon_, lat_):
 						x,y = view.project(globe.project(lon_, lat_))
 						pts.append(Point(x,y))
@@ -688,17 +722,19 @@ class SVGMap:
 						path['class'] = 'equator'
 					g.append(path)
 		
-		for lon in range(0,181, options.grat_step):
+		for lon in xfrange(0,181, options.grat_step):
 			lons = ([lon, -lon], [lon])[lon == 0 or lon == 180]
 			for lon_ in lons:
+				if lon_ < minLon or lon_ > maxLon:
+					continue
 				pts = []
 				lines = []
-				lat_range = range(options.grat_step, 181-options.grat_step,1)
+				lat_range = xfrange(options.grat_step, 181-options.grat_step,1)
 				if lon_ % 90 == 0:
-					lat_range = range(0, 181,1)
+					lat_range = xfrange(0, 181,1)
 				for lat in lat_range:
 					lat_ = lat-90
-					if lat_ < globe.minLat or lat_ > globe.maxLat:
+					if lat_ < minLat or lat_ > maxLat:
 						continue
 					if globe._visible(lon_, lat_):
 						x,y = view.project(globe.project(lon_, lat_))
@@ -781,10 +817,10 @@ class SVGMap:
 		"""	
 		options = self.options
 		globe = options.projection(**options.proj_opts)
+		llbbox = options.llbbox
 		
-		#bbox = Bounds2D()
-		bbox = globe.world_bounds()
-		
+		bbox = globe.world_bounds(llbbox)
+	
 		view = self.get_view(bbox)	
 		viewbox = Bounds2D(width=view.width, height=view.height)
 		
@@ -797,13 +833,18 @@ class SVGMap:
 			self.add_graticule(svg, globe, view, viewbox)
 		
 		polygons = self.get_polygons_world(globe, view)
+		
 		self.simplify_polygons(polygons)
 		
 		if options.cut_lakes:
 			polygons = self.cut_lakes(polygons, globe, view, viewbox)
 		
+		if options.llbbox != (-180,-90,180,90):
+			polygons = self.clip_polygons_to_sea(polygons, globe, view)
+		
 		self.add_map_layer(svg, polygons, 'countries', groupBy='iso')
 		self.save_or_display(svg, 'worldmap', outfile)
+	
 	
 	
 	def render_countries(self, target_iso3s, outfile=None):
@@ -1340,6 +1381,9 @@ class SVGMapOptions(object):
 		
 		if self.layer_id == None:
 			self.layer_id = 'layer'
+			
+		if self.llbbox == None:
+			self.llbbox = (-180,-90,180,90)
 
 
 

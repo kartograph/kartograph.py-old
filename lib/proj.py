@@ -62,12 +62,46 @@ class Proj(object):
 	def _truncate(self, x, y):
 		assert False, 'truncation is not implemented'
 	
-	def world_bounds(self):
-		assert False, 'world_bounds not implemented'
+	def world_bounds(self, llbbox=(-180,-90,180,90)):
+		from gisutils import Bounds2D, Point
+		bbox = Bounds2D()
+		sea = self.sea_shape(llbbox)		
+		for x,y in sea:
+			bbox.update(Point(x,y))
+		return bbox		
+
+	def sea_shape(self, llbbox=(-180,-90,180,90)):
+		sea = []
+		out = []
+		
+		minLon = llbbox[0]
+		maxLon = llbbox[2]
+		minLat = max(self.minLat, llbbox[1])
+		maxLat = min(self.maxLat, llbbox[3])
+		
+		def xfrange(start, stop, step):
+			if stop > start:
+				while start < stop:
+					yield start
+					start += step
+			else:
+				while stop < start:
+					yield start
+					start -= step
 	
-	def sea_shape(self):
-		assert False, 'sea_shape not implemented'
-	
+		lat_step = abs((maxLat - minLat)/180.0)
+		lon_step = abs((maxLon - minLon)/360.0)
+		
+		for lat in xfrange(minLat, maxLat, lat_step): sea.append((minLon,lat))
+		for lon in xfrange(minLon, maxLon, lon_step): sea.append((lon, maxLat))
+		for lat in xfrange(maxLat, minLat, lat_step): sea.append((maxLon, lat))
+		for lon in xfrange(maxLon, minLon, lon_step): sea.append((lon, minLat))
+		for s in sea:
+			lon, lat = s
+			out.append(self.project(lon, lat))
+			
+		return out	
+		
 	def __str__(self):
 		return 'Proj('+self.name+')'
 		
@@ -157,26 +191,6 @@ class Cylindrical(Proj):
 		
 	def _truncate(self, x, y):
 		return (x,y)
-		
-	def world_bounds(self):
-		from gisutils import Bounds2D, Point
-		bbox = Bounds2D()
-		for lat,lon in [(0,-180),(0,180),(self.minLat,0),(self.maxLat,0)]:
-			x,y = self.project(lon, lat)
-			bbox.update(Point(x,y))
-		return bbox
-	
-	def sea_shape(self):
-		sea = []
-		out = []
-		for lat in range(self.minLat,self.maxLat): sea.append((-180,lat))
-		for lon in range(-180,180): sea.append((lon, self.maxLat))
-		for lat in range(self.minLat, self.maxLat): sea.append((180, lat*-1))
-		for lon in range(-180,180): sea.append((lon*-1, self.minLat))
-		for s in sea:
-			lon, lat = s
-			out.append(self.project(lon, lat))
-		return out
 		
 	def toXML(self):
 		p = super(Cylindrical, self).toXML()
@@ -280,14 +294,6 @@ projections['mercator'] = Mercator
 class PseudoCylindrical(Cylindrical):
 	def __init__(self, lon0=0.0):
 		Cylindrical.__init__(self, lon0=lon0)
-
-	def world_bounds(self):
-		from gisutils import Bounds2D, Point
-		sea = self.sea_shape()
-		bbox = Bounds2D()
-		for s in sea:
-			bbox.update(Point(s[0],s[1]))
-		return bbox
 
 
 class NaturalEarth(PseudoCylindrical):
@@ -449,6 +455,7 @@ class Mollweide(PseudoCylindrical):
 		
 		k = self.cp * math.sin(phi)
 		i = self.MAX_ITER
+		
 		while i != 0:
 			v = (phi + math.sin(phi) - k) / (1. + math.cos(phi))
 			phi -= v
@@ -547,17 +554,23 @@ class Azimuthal(Proj):
 		y1 = self.r + self.r * math.sin(theta)
 		return (x1,y1)
 		
-	def world_bounds(self):
+	def world_bounds(self, llbbox=(-180,-90,180,90)):
 		from gisutils import Bounds2D
-		bbox = Bounds2D(width=self.r*2, height=self.r*2)
+		if llbbox == (-180,-90,180,90):
+			bbox = Bounds2D(width=self.r*2, height=self.r*2)
+		else:
+			bbox = super(Azimuthal, self).world_bounds(llbbox)
 		return bbox
 		
-	def sea_shape(self):
+	def sea_shape(self, llbbox=(-180,-90,180,90)):
 		out = []
-		for phi in range(0,360):
-			x = self.r + math.cos(math.radians(phi)) * self.r
-			y = self.r + math.sin(math.radians(phi)) * self.r
-			out.append((x,y))
+		if llbbox == (-180,-90,180,90):
+			for phi in range(0,360):
+				x = self.r + math.cos(math.radians(phi)) * self.r
+				y = self.r + math.sin(math.radians(phi)) * self.r
+				out.append((x,y))
+		else:
+			out = super(Azimuthal, self).sea_shape(llbbox)
 		return out
 		
 	def toXML(self):
@@ -800,25 +813,7 @@ class Conic(Proj):
 	def _truncate(self, x, y):
 		return (x,y)
 		
-	def world_bounds(self):
-		from gisutils import Bounds2D, Point
-		bbox = Bounds2D()
-		for (x,y) in self.sea_shape():
-			bbox.update(Point(x,y))
-		return bbox
 		
-	def sea_shape(self):
-		sea = []
-		out = []
-		for lat in range(self.minLat, self.maxLat): sea.append((self.lon0-180,lat))
-		for lon in range(-180,180): sea.append((self.lon0+lon, self.maxLat))
-		for lat in range(self.maxLat*-1, self.minLat*-1): sea.append((self.lon0+180,lat*-1))
-		for lon in range(-180,180): sea.append((self.lon0 - lon, self.minLat))
-		for s in sea:
-			lon, lat = s
-			out.append(self.project(lon, lat))
-		return out
-
 	def toXML(self):
 		p = super(Conic, self).toXML()
 		p['lon0'] = str(self.lon0)

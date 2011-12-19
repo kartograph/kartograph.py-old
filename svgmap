@@ -35,6 +35,7 @@ def usage():
 	print '   region       renders a single admin-level 1 region of a country'
 	print '   world        renders world map'
 	print '   layer        adds a new layer from a shapefile'
+	print '   bbox         '
 	print
 
 	
@@ -46,6 +47,9 @@ def main():
 	svgmap = SVGMap(options)
 	
 	if command == "world":
+		svgmap.render_world_map(outfile=options.outfile)
+		
+	if command == "bbox":
 		svgmap.render_world_map(outfile=options.outfile)
 		
 	elif command in ("country", "regions"):
@@ -101,7 +105,7 @@ def parse_args():
 	
 	command = sys.argv[1]
 	
-	if command not in ('world','country','regions','layer','region','countries'):
+	if command not in ('world','country','regions','layer','region','countries','bbox'):
 		usage()
 		sys.exit(2)
 	
@@ -114,6 +118,15 @@ def parse_args():
 		long_opt += []
 		opt_str += ''
 		cmd_args = sys.argv[2:]
+		
+	if command == "bbox":
+		if len(sys.argv) < 3:
+			print '\nError: you must define a lonlat bounding box'
+			print '       e.g. -180,-90,180,90'
+			print
+			sys.exit(2)
+		options.llbbox = map(float, sys.argv[2].split(','))
+		cmd_args = sys.argv[3:]
 		
 	if command == "countries":
 		if len(sys.argv) < 3:

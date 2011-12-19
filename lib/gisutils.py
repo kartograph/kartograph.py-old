@@ -484,13 +484,31 @@ def clip_to_rect(polygon, bbox):
 	clips a polygon to a given bounding box
 	takes in a gisutils.Polygon and gisutils.Bounds2D
 	"""
-	from Polygon import Polygon as Poly
 	from Polygon.Shapes import Rectangle
-	
-	# step 1: create polygons from input data structures
 	rect = Rectangle(bbox.width, bbox.height)
 	rect.shift(bbox.left, bbox.top)
 	
+	return clip_to_poly(polygon, rect)
+	
+
+def clip_to_poly_pts(polygon, pts):
+	"""
+	"""
+	from Polygon import Polygon as Poly
+	pts_ = []
+	for pt in pts:
+		pts_.append((pt.x, pt.y))
+	clip_poly = Poly(pts_)
+	return clip_to_poly(polygon, clip_poly)
+	
+
+def clip_to_poly(polygon, clip_poly):
+	"""
+	polygon clipping
+	"""
+	from Polygon import Polygon as Poly
+	
+	# step 1: create polygons from input data structures
 	pts = []
 	for p in polygon.points:
 		if p.deleted:
@@ -504,7 +522,7 @@ def clip_to_rect(polygon, bbox):
 	poly = Poly(pts)
 	
 	# crop polygon to rectangle
-	out = poly & rect
+	out = poly & clip_poly
 	
 	outPolys = []
 	for i in range(0, len(out)):
