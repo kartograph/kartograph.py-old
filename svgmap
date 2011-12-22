@@ -112,7 +112,7 @@ def parse_args():
 	# parse options
 	# global options
 	opt_str = "o:w:h:r:p:q:sfvg:l"
-	long_opt = ['output=', 'width=', 'height=', 'ratio=', 'padding=', 'quality=', 'sea', 'force-overwrite', 'context-quality=', 'verbose', 'proj=','list-projections','graticule=','round-coordinates','lon0=','lat0=','lat1=','lat2=','dist=','up=', 'tilt=', 'cut-lakes']
+	long_opt = ['output=', 'width=', 'height=', 'ratio=', 'padding=', 'quality=', 'sea', 'force-overwrite', 'context-quality=', 'verbose', 'proj=','list-projections','graticule=','round-coordinates','lon0=','lat0=','lat1=','lat2=','dist=','up=', 'tilt=', 'cut-lakes', 'flip']
 
 	if command == "world":
 		opt_str += ''
@@ -252,6 +252,8 @@ def parse_args():
 				options.proj_opts['up'] = float(a)
 			elif o == '--tilt':
 				options.proj_opts['tilt'] = float(a)
+			elif o == '--flip':
+				options.proj_opts['flip'] = 1
 			elif o == '--filter':
 				m = a[0]
 				codes = a[1:].upper().split(',')
