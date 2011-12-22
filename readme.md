@@ -40,6 +40,7 @@ The following global options are avaiable
 * **--padding**, **-p** how much spacing should be added around the map content
 * **--force-overwrite**, **-f** by default, existing files will not be overwritten in batch mode, unless you set this parameter
 * **--list-projections** prints a list of all available map projections
+* **--round-coordinates** rounds all coordinates to integer values to reduce file size
 
 
 ### Available Commands
@@ -74,6 +75,7 @@ Command-specific options are:
 * **--sea**, **-s** adds a sea background to the map
 * **--proj** specify the map projection that should be used
 * **--lon0** sets the center longitude
+* **--filter** filter out some countries
 
 ## Rendering country maps
 
@@ -184,7 +186,7 @@ Command-specific parameters are:
 
 * **--layer-id** will be used as id for the layer
 * **--crop-to-layer** can be used to crop the shape to any existing layer
-* **--data-col** here you can insert the shapefiles metadata column numbers that should be included in the SVG map (e.g. "2,4")
+* **--data-col** here you can insert the shapefiles record column names that should be included in the SVG map (e.g. "ISO3,HASC")
 
 ## Advanced usage 
 

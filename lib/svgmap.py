@@ -307,9 +307,13 @@ class SVGMap:
 		proj = globe.toXML()
 		bbox = SVG('bbox', x=round(bbox.left,2), y=round(bbox.top,2), w=round(bbox.width,2), h=round(bbox.height,2))
 		
+		ll = options.llbbox
+		llbbox = SVG('llbbox', lon0=ll[0],lon1=ll[2],lat0=ll[1],lat1=ll[3])
+		
 		views.append(view)
 		view.append(proj)
 		view.append(bbox)
+		view.append(llbbox)
 		
 		meta.append(views)
 		svg.append(meta)
@@ -332,7 +336,6 @@ class SVGMap:
 				lonlat = []
 				for k in range(0,len(pts)):
 					lonlat.append((pts[k][0],pts[k][1]))
-				
 				
 				mpoints = globe.plot(lonlat)
 				if mpoints == None: continue
@@ -435,19 +438,53 @@ class SVGMap:
 		return polygons
 
 
+	def get_polygon_filter(self, sfread):
+		"""
+		returns a filter function
+		"""
+		fm = self.options.filter_mode
+		fd = self.options.filter_codes
+		fc = False
+		
+		if fm:
+			filtcol = self.options.filter_column
+			fields = sfread.fields
+			for d in range(1,len(fields)):
+				if fields[d][0] == filtcol:
+					fc = d-1
+					if self.options.verbose:
+						print 'found filter column '+filtcol+' at '+str(fc)
+					break
+					
+		if fm != False and fc == False:
+			raise 'Cant find column '+filtcol
+		
+		def filt(rec):
+			id = str(rec[fc])
+			res = fm == False or (fm == '+' and id in fd) or (fm == '-' and id not in fd)
+			return res
+			
+		return filt
+		
+
 	def get_polygons_world(self, globe, view):
 		"""
 		returns a list of gisutils.Polygon that will be visible in the map
 		used for mode=world
 		"""
+		
+		filt = self.get_polygon_filter(self.sf_reader['countries'])
+		
 		polygons = []
 			
 		country_recs = self.sf_recs['countries']
 		
 		for i in range(len(country_recs)):
 			shp = self.get_shape('countries', i)
-			iso3 = country_recs[i][29]
-			polygons += self.get_shape_polygons(shp, iso3, globe, view, data=self.get_polygon_data(country_recs[i]))
+			rec = country_recs[i]
+			iso3 = rec[29]
+			if filt(rec):
+				polygons += self.get_shape_polygons(shp, iso3, globe, view, data=self.get_polygon_data(country_recs[i]))
 		
 		return polygons
 	
@@ -912,6 +949,7 @@ class SVGMap:
 		if options.cut_lakes:
 			polygons = self.cut_lakes(polygons, globe, view, viewBox)
 		
+		
 		polygons = self.clip_polygons(polygons, viewBox)
 		
 		_focus = lambda p: p.id in target_iso3s
@@ -1116,6 +1154,7 @@ class SVGMap:
 		svg_view = svg_views[0]
 		svg_proj = svg_view[0]
 		svg_bbox = svg_view[1]
+		svg_llbbox = svg_view[2]
 		
 		pd = float(svg_view['padding'])
 		
@@ -1129,6 +1168,8 @@ class SVGMap:
 		options.out_height = vh
 		options.force_ratio = True
 		options.out_padding = pd
+		
+		options.llbbox = map(float, (svg_llbbox['lon0'],svg_llbbox['lat0'],svg_llbbox['lon1'],svg_llbbox['lat1']))
 		
 		view = self.get_view(bbox)
 		viewbox = Bounds2D(width=view.width, height=view.height)
@@ -1163,33 +1204,43 @@ class SVGMap:
 		
 		sf = shapefile.Reader(shp_src)
 		
+		filt = self.get_polygon_filter(sf)
+		
 		fields = []
 		for f in sf.fields[1:]:
-			fields.append(f[0].lower().replace('_','-'))
+			fields.append(f[0])
 		
 		shprecs = sf.shapeRecords()
+		
 		polygons = []
 		
 		for sx in range(len(shprecs)):
 			shp = shprecs[sx].shape
 			rec = shprecs[sx].record
-			data = {  }
-			for i in data_column:
-				data[fields[i]] = Utils.remove_unicode(rec[i])
+			if not filt(rec): 
+				continue
+			data = { }
+			for d in data_column:
+				for f in range(len(fields)):
+					if d == fields[f]:
+						data[fields[f].lower().replace('_','-')] = Utils.remove_unicode(rec[f])
 			
 			polys = self.get_shape_polygons(shp, "", globe, view, data=data)
 			for poly in polys:
 				if poly.bbox.intersects(viewbox):
 					polygons.append(poly)
 		
-		polygons = self.merge_biggest_polygons(polygons, 400)
+		# polygons = self.merge_biggest_polygons(polygons, 4000)
 		
 		self.simplify_polygons(polygons)
 		
 		if options.cut_lakes:
 			polygons = self.cut_lakes(polygons, globe, view, viewbox)
 		
-		polygons = self.clip_polygons(polygons, viewbox)
+		if options.llbbox != (-180,-90,180,90):
+			polygons = self.clip_polygons_to_sea(polygons, globe, view)
+		else:
+			polygons = self.clip_polygons(polygons, viewbox)
 		
 		if layer_poly != None:
 			from gisutils import polygon_to_poly, poly_to_polygons
@@ -1200,8 +1251,6 @@ class SVGMap:
 				if poly_ != None:
 					out += poly_to_polygons(poly_, id=polygon.id, data=polygon.data, closed=polygon.closed)
 			polygons = out
-			
-		
 			
 		self.add_map_layer(svg, polygons, options.layer_id, polycolor=polycolor)
 		
@@ -1272,7 +1321,7 @@ class SVGMap:
 		return out
 		
 		
-	def merge_biggest_polygons(self, polygons, area_thresh=1000):
+	def merge_biggest_polygons(self, polygons, area_thresh=5000):
 		out = []
 		join = []
 		
@@ -1281,10 +1330,10 @@ class SVGMap:
 			if area < area_thresh:
 				out.append(poly)
 			else:
-				join.append(poly)
+				join.append(poly)	
 				
-		out += gisutils.merge_polygons(join)
-			
+		if len(join) > 0:
+			out += gisutils.merge_polygons(join)
 		return out
 
 
@@ -1337,7 +1386,10 @@ class SVGMapOptions(object):
 		self.force_lon0 = False
 		
 		self.cut_lakes = False
-	
+		
+		self.filter_mode = False
+		self.filter_codes = []
+		self.filter_column = 'ISO_A3'
 	
 	def applyDefaults(self, command=""):
 	

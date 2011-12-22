@@ -115,9 +115,9 @@ def parse_args():
 	long_opt = ['output=', 'width=', 'height=', 'ratio=', 'padding=', 'quality=', 'sea', 'force-overwrite', 'context-quality=', 'verbose', 'proj=','list-projections','graticule=','round-coordinates','lon0=','lat0=','lat1=','lat2=','dist=','up=', 'tilt=', 'cut-lakes']
 
 	if command == "world":
-		long_opt += []
 		opt_str += ''
 		cmd_args = sys.argv[2:]
+		long_opt += ['filter=','filter-col=']
 		
 	if command == "bbox":
 		if len(sys.argv) < 3:
@@ -126,6 +126,7 @@ def parse_args():
 			print
 			sys.exit(2)
 		options.llbbox = map(float, sys.argv[2].split(','))
+		long_opt += ['filter=','filter-col=']
 		cmd_args = sys.argv[3:]
 		
 	if command == "countries":
@@ -161,6 +162,7 @@ def parse_args():
 			sys.exit(2)
 		else:
 			long_opt += ['layer-id=', 'crop-at-layer=', 'data-col=']
+			long_opt += ['filter=','filter-col=']
 			options.svg_src = sys.argv[2]
 			options.shapefile_src = sys.argv[3]
 			cmd_args = sys.argv[4:]
@@ -217,7 +219,7 @@ def parse_args():
 			elif o == '--round-coordinates':
 				options.round_coordinates = True
 			elif o == "--data-col":
-				options.layer_data_column = map(int, a.split(','))
+				options.layer_data_column = a.split(',')
 			elif o in ('--cut-lakes', '-l'):
 				options.cut_lakes = True
 			
@@ -250,6 +252,13 @@ def parse_args():
 				options.proj_opts['up'] = float(a)
 			elif o == '--tilt':
 				options.proj_opts['tilt'] = float(a)
+			elif o == '--filter':
+				m = a[0]
+				codes = a[1:].upper().split(',')
+				options.filter_mode = m
+				options.filter_codes = codes
+			elif o == '--filter-col':
+				options.filter_column = a
 			
 
 		options.applyDefaults(command)
