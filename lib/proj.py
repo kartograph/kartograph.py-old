@@ -1,5 +1,5 @@
 """
-    kartograph - a simple toolset that helps creating interactive thematic maps
+    kartograph - a svg mapping library
     Copyright (C) 2011  Gregor Aisch
 
     This program is free software: you can redistribute it and/or modify

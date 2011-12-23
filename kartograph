@@ -1,6 +1,6 @@
 #!/usr/bin/env python2.7
 """
-    svgmap - a simple toolset that helps creating interactive thematic maps
+    kartograph - a svg mapping library 
     Copyright (C) 2011  Gregor Aisch
 
     This program is free software: you can redistribute it and/or modify
@@ -18,12 +18,12 @@
 """
 
 """
-	This is the command line interface for svgmap.
+	This is the command line interface for kartograph.
 """
 
 import sys, os.path, getopt
 
-from lib.svgmap import SVGMap, SVGMapOptions
+from lib.kartograph import Kartograph, KartographOptions
 
 def usage():
 	print '\nUsage: '+os.path.basename(sys.argv[0])+' command'
@@ -44,13 +44,13 @@ def main():
 	
 	parse_args()
 	
-	svgmap = SVGMap(options)
+	kartograph = Kartograph(options)
 	
 	if command == "world":
-		svgmap.render_world_map(outfile=options.outfile)
+		kartograph.render_world_map(outfile=options.outfile)
 		
 	if command == "bbox":
-		svgmap.render_world_map(outfile=options.outfile)
+		kartograph.render_world_map(outfile=options.outfile)
 		
 	elif command in ("country", "regions"):
 		iso3 = options.target_countries[0]
@@ -58,27 +58,27 @@ def main():
 		regions = command == "regions"
 		
 		if options.add_context:
-			svgmap.render_country_and_context(iso3, outfile=out, regions=regions)	
+			kartograph.render_country_and_context(iso3, outfile=out, regions=regions)	
 		else:
-			svgmap.render_country(iso3, outfile=out, regions=regions)
+			kartograph.render_country(iso3, outfile=out, regions=regions)
 		
 	elif command == "region":
 		iso3 = options.target_countries[0]
 		out = options.outfile
 		
 		if options.add_context:
-			svgmap.render_country_and_context(iso3, outfile=out, regions=True, focusRegion=options.focus_region)	
+			kartograph.render_country_and_context(iso3, outfile=out, regions=True, focusRegion=options.focus_region)	
 		else:
-			svgmap.render_country(iso3, outfile=out, regions=True, focusRegion=options.focus_region)
+			kartograph.render_country(iso3, outfile=out, regions=True, focusRegion=options.focus_region)
 		
 	elif command == "layer":
 		svg_src = options.svg_src
 		shp_src = options.shapefile_src
 		data_col = options.layer_data_column
-		svgmap.add_shapefile_layer(svg_src, shp_src, data_column = data_col, outfile=options.outfile)
+		kartograph.add_shapefile_layer(svg_src, shp_src, data_column = data_col, outfile=options.outfile)
 		
 	elif command == "countries":
-		svgmap.render_countries(options.target_countries, outfile=options.outfile)
+		kartograph.render_countries(options.target_countries, outfile=options.outfile)
 
 
 def list_projections():
@@ -97,7 +97,7 @@ def parse_args():
 	
 	import math
 	
-	options = SVGMapOptions()
+	options = KartographOptions()
 	
 	if len(sys.argv) < 2:
 		usage()
@@ -158,7 +158,7 @@ def parse_args():
 		
 	if command == "layer":
 		if len(sys.argv) < 4:
-			print "\nError: you must provide a svg-map and a shapefile\n\n"+os.path.basename(sys.argv[0])+' '+command+' SVGMAP.svg SHAPEFILE'
+			print "\nError: you must provide a svg-map and a shapefile\n\n"+os.path.basename(sys.argv[0])+' '+command+' kartograph.svg SHAPEFILE'
 			sys.exit(2)
 		else:
 			long_opt += ['layer-id=', 'crop-at-layer=', 'data-col=']

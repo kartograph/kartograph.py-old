@@ -1,6 +1,6 @@
 #!/usr/bin/env python2.7
 """
-    svgmap - a simple toolset that helps creating interactive thematic maps
+    kartograph - a svg mapping library 
     Copyright (C) 2011  Gregor Aisch
 
     This program is free software: you can redistribute it and/or modify
@@ -46,12 +46,12 @@ from gisutils import Bounds2D, Point, View, Polygon
 import gisutils
 import proj
 
-class SVGMap:
+class Kartograph:
 
 	def __init__(self, options=None):
 		self.options = options
 		if self.options is None: 
-			self.options = SVGMapOptions()
+			self.options = kartographOptions()
 		
 		self.options.applyDefaults()
 		
@@ -1338,7 +1338,7 @@ class SVGMap:
 
 
 
-class SVGMapOptions(object):
+class KartographOptions(object):
 	"""
 	this class stores all options = self.options needed by this script
 	"""
@@ -1454,7 +1454,7 @@ class Utils:
 
 if __name__ == '__main__':
 	# some tests
-	options = SVGMapOptions()
+	options = kartographOptions()
 	options.verbose = False
 	options.applyDefaults()
 	
@@ -1466,56 +1466,56 @@ if __name__ == '__main__':
 		return res
 	
 	
-	svgmap = SVGMap(options)
+	kartograph = Kartograph(options)
 	from proj import Robinson, LAEA, Stereographic
 	
 
-	svgmap.add_shapefile_layer('DE.svg', '../misc/de-wahlkreise/wahlkreise', data_columns=(2,4))
+	kartograph.add_shapefile_layer('DE.svg', '../misc/de-wahlkreise/wahlkreise', data_columns=(2,4))
 
 	exit()
 	
 	proj = Robinson()
 
 	
-	_test('get shape', svgmap.get_shape('countries', 123))
-	DEU = _test('shape index', svgmap.country_index['DEU'])
-	rec = svgmap.get_country_record('DEU')
+	_test('get shape', kartograph.get_shape('countries', 123))
+	DEU = _test('shape index', kartograph.country_index['DEU'])
+	rec = kartograph.get_country_record('DEU')
 	_test('get_country_record', rec[:5]+['...'])
-	shp = _test('get_country_shape', svgmap.get_country_shape('DEU'))
-	_test('shape area', '%.2f sqkm'%svgmap.shape_area('countries', DEU))
-	_test('country region indices', svgmap.get_country_region_indices('DEU')[:5]+['...'])
-	bbox = _test('country bbox', svgmap.get_country_bbox('DEU', proj))
+	shp = _test('get_country_shape', kartograph.get_country_shape('DEU'))
+	_test('shape area', '%.2f sqkm'%kartograph.shape_area('countries', DEU))
+	_test('country region indices', kartograph.get_country_region_indices('DEU')[:5]+['...'])
+	bbox = _test('country bbox', kartograph.get_country_bbox('DEU', proj))
 	view = _test('init view', View(bbox, 400,300,10))
-	_test('init svg', svgmap.init_svg_canvas(view, bbox, proj)[:])
-	_test('get shp polys', svgmap.get_shape_polygons(shp,'DEU',proj,view)[:2]+['...'])
-	_test('get poly data', svgmap.get_polygon_data(rec))
-	#	_test('get_country_shape', svgmap.get_country_shape('DEU'))
+	_test('init svg', kartograph.init_svg_canvas(view, bbox, proj)[:])
+	_test('get shp polys', kartograph.get_shape_polygons(shp,'DEU',proj,view)[:2]+['...'])
+	_test('get poly data', kartograph.get_polygon_data(rec))
+	#	_test('get_country_shape', kartograph.get_country_shape('DEU'))
 
-	svgmap.options.projection = LAEA
+	kartograph.options.projection = LAEA
 
-	_test('render country', svgmap.render_country('DEU'))
-	_test('render regions', svgmap.render_country('DEU', regions=True))
-	#_test('render regions w context', svgmap.render_country_and_context('DEU', regions=True))
+	_test('render country', kartograph.render_country('DEU'))
+	_test('render regions', kartograph.render_country('DEU', regions=True))
+	#_test('render regions w context', kartograph.render_country_and_context('DEU', regions=True))
 	
-	svgmap.options.sea_layer = True
-	svgmap.options.graticule = 15
-	svgmap.options.projection = Robinson
-	svgmap.options.lon0 = -100
-	svgmap.options.force_lon0 = True
+	kartograph.options.sea_layer = True
+	kartograph.options.graticule = 15
+	kartograph.options.projection = Robinson
+	kartograph.options.lon0 = -100
+	kartograph.options.force_lon0 = True
 	
-	#_test('render world map', svgmap.render_world_map())
+	#_test('render world map', kartograph.render_world_map())
 	
-	svgmap.options.projection = Stereographic
-	svgmap.options.lat0 = 90
-	svgmap.options.force_lat0 = True
+	kartograph.options.projection = Stereographic
+	kartograph.options.lat0 = 90
+	kartograph.options.force_lat0 = True
 	
-	#_test('render world map (2)', svgmap.render_world_map())
+	#_test('render world map (2)', kartograph.render_world_map())
 
-	svgmap.options.force_lat0 = False
-	svgmap.options.force_lon0 = False
-	svgmap.options.out_padding = 30
+	kartograph.options.force_lat0 = False
+	kartograph.options.force_lon0 = False
+	kartograph.options.out_padding = 30
 	
-	_test('render countries', svgmap.render_countries(['ESP','FRA','DEU','GBR','ITA']))
+	_test('render countries', kartograph.render_countries(['ESP','FRA','DEU','GBR','ITA']))
 	
 	
 	print
