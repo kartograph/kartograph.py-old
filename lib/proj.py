@@ -1,5 +1,5 @@
 """
-    svgmap - a simple toolset that helps creating interactive thematic maps
+    kartograph - a simple toolset that helps creating interactive thematic maps
     Copyright (C) 2011  Gregor Aisch
 
     This program is free software: you can redistribute it and/or modify
@@ -17,7 +17,7 @@
 """
 
 """
-Map projections used in svgmap
+Map projections used in kartograph
 
 Most of the projection formulas are taken from PROJ.4 implementation
 
@@ -637,7 +637,7 @@ class LAEA(Azimuthal):
 		
 	def project(self, lon, lat):
 		from math import radians as rad, pow, asin, cos, sin
-		lon,lat = self.ll(lon, lat)
+		# lon,lat = self.ll(lon, lat)
 		phi = rad(lat)
 		lam = rad(lon)
 		
@@ -790,14 +790,17 @@ class EquidistantAzimuthal(Azimuthal):
 		
 	def project(self, lon, lat):
 		from math import radians as rad, pow, asin, cos, sin
-		lon,lat = self.ll(lon, lat)
 		
 		phi = rad(lat)
 		lam = rad(lon)
 
 		cos_c = sin(self.phi0) * sin(phi) + cos(self.phi0) * cos(phi) * cos(lam - self.lam0)
 		c = math.acos(cos_c)
-		k = 0.325 * c/sin(c)
+		sin_c = sin(c)
+		if sin_c == 0:
+			k = 1	
+		else:
+			k = 0.325 * c/sin(c)
 		
 		xo = self.r * k * cos(phi) * sin(lam - self.lam0)
 		yo = -self.r * k * ( cos(self.phi0)*sin(phi) - sin(self.phi0)*cos(phi)*cos(lam - self.lam0) )
@@ -806,9 +809,30 @@ class EquidistantAzimuthal(Azimuthal):
 		y = self.r + yo
 		
 		return (x,y)
+		
+	def _visible(self, lon, lat):
+		return True
 
 projections['equi'] = EquidistantAzimuthal
 
+
+class Aitoff(EquidistantAzimuthal):
+	"""
+	Aitoff Azimuthal projection
+	
+	implementation taken from 
+	Snyder, Map projections - A working manual
+	"""
+	def __init__(self,lat0=0.0,lon0=0.0):
+		self.cosphi = 1
+		EquidistantAzimuthal.__init__(self, lat0=0, lon0=lon0)		
+		
+	def project(self, lon, lat):
+		x,y = EquidistantAzimuthal.project(self, lon, lat)
+		y *= .5
+		return (x,y)
+
+projections['aitoff'] = Aitoff
 
 		
 class Conic(Proj):
