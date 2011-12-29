@@ -217,4 +217,4 @@ The **bbox** command can be used to map custom lon/lat ranges.
 
 	kartograph bbox -19,-36,53,38 -g5 -s --proj stereo --lon0 16 --lat0 2 -l 
 	
-[Africa](https://github.com/kartograph/kartograph.py/raw/master/doc/africa.png)
+![Africa](https://github.com/kartograph/kartograph.py/raw/master/doc/africa.png)
