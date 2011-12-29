@@ -210,3 +210,11 @@ Fortunately, in those cases the Natural Earth adm1 shapefile stores some values 
 	kartograph.py regions GBR --join-regions
 
 ![United Kingdom regions](https://github.com/kartograph/kartograph.py/raw/master/doc/GBR-regions.png)   ![United Kingdom regions](https://github.com/kartograph/kartograph.py/raw/master/doc/GBR-regions-joined.png)
+
+## Generating maps of custom lon/lat ranges
+
+The **bbox** command can be used to map custom lon/lat ranges.
+
+	kartograph bbox -19,-36,53,38 -g5 -s --proj stereo --lon0 16 --lat0 2 -l 
+	
+[Africa](https://github.com/kartograph/kartograph.py/raw/master/doc/africa.png)

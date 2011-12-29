@@ -740,7 +740,7 @@ class Kartograph:
 				yield start
 				start += step
 
-		g = SVG('g', id='graticule')
+		g = SVG('g', id='graticule', style="fill:none;stroke-width:0.25pt;")
 		svg.append(g)
 		for lat in xfrange(0,90, options.grat_step):
 			lats = ([lat, -lat], [0])[lat == 0]
