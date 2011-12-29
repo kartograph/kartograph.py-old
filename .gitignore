@@ -1,4 +1,5 @@
 .DS_Store
+*.pyc
 svgmap.py/tmp.svg
 svgmap.py/tmp/
 data/shp/*.shp
