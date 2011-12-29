@@ -62,6 +62,7 @@ class Kartograph:
 		
 		self.load_shape_records()
 		
+		
 
 	def load_shape_records(self):
 		"""
@@ -102,6 +103,15 @@ class Kartograph:
 		"""
 		creates a dict of iso3 -> index
 		"""
+		import csv
+		countryInfo = csv.reader(open(self.options.data_path + 'countryInfo.txt'), dialect='excel-tab')
+		cinfo = {} # dict of iso3 -> country info record
+		for r in countryInfo:
+			if r[0][0] == "#": continue
+			iso2,iso3,ison,fips = r[0:4]
+			cinfo[iso3] = dict(iso3=iso3,iso2=iso2, num=ison, fips=fips)
+		self.country_info = cinfo
+		
 		country_recs = self.sf_recs['countries']
 		ci = {}
 		for i in range(len(country_recs)):
@@ -321,7 +331,7 @@ class Kartograph:
 		return svg
 
 
-	def get_shape_polygons(self, shp, id, globe, view, data=None, holes=False):
+	def get_shape_polygons(self, shp, iso3, globe, view, data=None, holes=False):
 		"""
 		projects a shapefile shape and returns a list of polygons
 		"""
@@ -330,6 +340,10 @@ class Kartograph:
 			parts = shp.parts[:]
 			parts.append(len(shp.points))
 			if data is None: data = {}
+			if iso3 != '' and iso3 != None and iso3 in self.country_info:
+				cinfo = self.country_info[iso3]
+				for k in cinfo:
+					data[k] = cinfo[k]
 			errs = 0
 			for j in range(0,len(parts)-1):
 				pts = shp.points[parts[j]:parts[j+1]]
@@ -345,7 +359,7 @@ class Kartograph:
 						if xy != None:
 							poly_points.append(view.project(Point(xy[0], xy[1])))
 						else: errs += 1
-					polygon = Polygon(id, poly_points, mode='point', data=data, closed=shp.shapeType == 5, isHole=holes)
+					polygon = Polygon(iso3, poly_points, mode='point', data=data, closed=shp.shapeType == 5, isHole=holes)
 					if polygon != None:
 						polys.append(polygon)
 		else:
@@ -363,7 +377,7 @@ class Kartograph:
 			if rec[7] == "" and rec[19] == "":
 				data['name'] =  Utils.remove_unicode(rec[4].decode('ISO 8859-1'))
 		else:
-			data = { 'iso': rec[29] }
+			data = {  }
 		return data	
 		
 
@@ -663,7 +677,6 @@ class Kartograph:
 				# todo: looks ugly
 				svg_path = SVG('path', d=' '.join(path_str_arr))
 				poly = group[0]
-				svg_path['data-iso'] = poly.id
 				
 				if type(polycolor) == FunctionType:
 					svg_path['fill'] = polycolor(poly.data)
