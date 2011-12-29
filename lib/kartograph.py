@@ -51,7 +51,7 @@ class Kartograph:
 	def __init__(self, options=None):
 		self.options = options
 		if self.options is None: 
-			self.options = kartographOptions()
+			self.options = KartographOptions()
 		
 		self.options.applyDefaults()
 		
@@ -116,6 +116,9 @@ class Kartograph:
 		ci = {}
 		for i in range(len(country_recs)):
 			iso3 = country_recs[i][29]
+			if iso3 == "SDS":
+				# fix natural earth South Sudan ISO3 code
+				iso3 = country_recs[i][29] = "SSD"
 			ci[iso3] = i
 		self.country_index = ci
 	
