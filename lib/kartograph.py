@@ -872,7 +872,7 @@ class Kartograph:
 		globe = options.projection(**options.proj_opts)
 		llbbox = options.llbbox
 		
-		bbox = globe.world_bounds(llbbox)
+		bbox = globe.world_bounds(Bounds2D(), llbbox)
 	
 		view = self.get_view(bbox)	
 		viewbox = Bounds2D(width=view.width, height=view.height)

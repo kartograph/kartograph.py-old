@@ -58,12 +58,10 @@ class Proj(object):
 	def _truncate(self, x, y):
 		assert False, 'truncation is not implemented'
 	
-	def world_bounds(self, llbbox=(-180,-90,180,90)):
-		from gisutils import Bounds2D, Point
-		bbox = Bounds2D()
-		sea = self.sea_shape(llbbox)		
+	def world_bounds(self, bbox, llbbox=(-180,-90,180,90)):
+		sea = self.sea_shape(llbbox)	
 		for x,y in sea:
-			bbox.update(Point(x,y))
+			bbox.update((x,y))
 		return bbox		
 
 	def sea_shape(self, llbbox=(-180,-90,180,90)):

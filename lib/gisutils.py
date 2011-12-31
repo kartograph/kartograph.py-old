@@ -308,6 +308,8 @@ class Bounds2D(object):
 			self.height = height
 			
 	def update(self, pt):
+		if not isinstance(pt,Point):
+			pt = Point(pt[0],pt[1])
 		self.xmin = min(self.xmin, pt.x)
 		self.ymin = min(self.ymin, pt.y)
 		self.xmax = max(self.xmax, pt.x)
