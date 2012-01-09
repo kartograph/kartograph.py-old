@@ -16,7 +16,11 @@ One of the following should work
 
 ### Polygon
 
-Unfortunately, the original maintainer of this library has taken offline his site. But you still can download the Mac package from here:
+This should work:
+
+	pip install polygon
+
+Alternatively download mac binaries from 
 
 http://pypi.python.jp/Polygon/Polygon-2.0.4.macosx-10.6-universal.tar.gz#md5=302abdd94b25ccd5e3a7cbbd7635d777
 
@@ -29,13 +33,13 @@ Follow instructions here:
 
 http://code.google.com/p/svgfig/wiki/HowToInstall
 
-## Download svgmap.py
+## Download kartograph.py
 
-	git clone https://github.com/svgmap/svgmap.py
+	git clone https://github.com/kartograph/kartograph.py
 
 Output should look like this:
 
-	Cloning into svgmap.py...
+	Cloning into kartograph.py...
 	remote: Counting objects: 422, done.
 	remote: Compressing objects: 100% (265/265), done.
 	remote: Total 422 (delta 210), reused 353 (delta 141)
@@ -45,11 +49,11 @@ Output should look like this:
 ## Download shapefiles
 Kartograf needs some shapefiles from naturalearthdata.com. While you could download them manually, you can also get them packed into one archive:
 
-http://kartograf.org/data.7z
+http://kartograph.org/data.7z
 
-Download them into your svgmap.py/ directory and unzip them via
+Download them into your kartograph.py/ directory and unzip them via
 
-	cd svmap.py
+	cd kartograph.py
 	7z x data.7z
 
 You can safely replace any files.
@@ -60,8 +64,8 @@ You may need to install the **7z** archive utility
 
 ## Test installation
 
-	cd svgmap.py
-	python svgmap world -o world.svg
+	cd kartograph.py
+	python kartograph world -o world.svg
 
 If you want to open generated maps automatically, save the following script to `/usr/local/bin/firefox` (make sure to point it to the location where you installed Firefox on your system).
 
@@ -74,12 +78,12 @@ Using that, you're able to open things in Firefox via command line, eg.
 
 If you then run svgmap without the -o parameter, the map would automatically open in firefox.
 
-	python svgmap world
+	python kartograph world
 
 If you don't want to type that "python " prefix you can run this. Note that you still have to run svgmap from the svgmap.py/ directory.
 
-	chmod +x svgmap
+	chmod +x kartograph
 	export PATH=$PATH:.
-	svgmap world
+	kartograph world
 
 
