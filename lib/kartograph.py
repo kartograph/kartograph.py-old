@@ -43,6 +43,7 @@ custom_country_center = {}
 custom_country_center['USA'] = (-98.606,39.622)	
 		
 from gisutils import Bounds2D, Point, View, Polygon
+#from polygon import Polygon
 import gisutils
 import proj
 
@@ -348,13 +349,16 @@ class Kartograph:
 				for k in cinfo:
 					data[k] = cinfo[k]
 			errs = 0
+			
+			#polygon = Polygon(data=data)
+			
 			for j in range(0,len(parts)-1):
 				pts = shp.points[parts[j]:parts[j+1]]
-				lonlat = []
-				for k in range(0,len(pts)):
-					lonlat.append((pts[k][0],pts[k][1]))
+				#lonlat = []
+				#for k in range(0,len(pts)):
+				#	lonlat.append((pts[k][0],pts[k][1]))
 				
-				mpoints = globe.plot(lonlat)
+				mpoints = globe.plot(pts)
 				if mpoints == None: continue
 				for points in mpoints:
 					poly_points = []
@@ -362,6 +366,7 @@ class Kartograph:
 						if xy != None:
 							poly_points.append(view.project(Point(xy[0], xy[1])))
 						else: errs += 1
+					#polygon.addContour(poly_points, isHole=holes)
 					polygon = Polygon(iso3, poly_points, mode='point', data=data, closed=shp.shapeType == 5, isHole=holes)
 					if polygon != None:
 						polys.append(polygon)
@@ -1351,6 +1356,80 @@ class Kartograph:
 		if len(join) > 0:
 			out += gisutils.merge_polygons(join)
 		return out
+	
+	"""
+	NEW API STUFF GOES BELOW THIS LINE
+	"""
+	def generate(self, opts, output=None):
+		"""
+		new generic render api, will replace all render_... methods
+		"""
+		import options
+		options.parse_options(opts)
+
+		print opts		
+		
+		
+		
+	def get_map_center(self, opts):
+		"""
+		depends on the layer config
+		"""
+		pass
+	
+	
+	def get_bounds(self, opts, proj):
+		"""
+		computes the (x,y) bounding box for the map, given a specific projection
+		"""
+		bnds = opts['bounds']
+		type = bnds['type']
+		data = bnds['data']
+		
+		if bt == "bbox": # catch special case bbox
+			bt = "points"
+			lon0,lat0,lon1,lat1 = data # lon0,lat0,lon1,lat1
+			data = [(lon0,lat0),(lon0,lat1),(lon1,lat0),(lon1,lat1)]
+		
+		bbox = Bounds2D()
+				
+		if bt == "points":
+			for lon,lat in data:
+				pt = proj.project(lon,lat)
+				bbox.update(pt)
+				
+		if bt == "polygons":
+			data['layer'] = 'countries'
+			data['idcol'] = 'ISO3'
+			data['ids'] = ['DEU','FRA','ESP']
+			
+		
+		return bbox
+	
+		
+	
+
+	
+	def render_map2(self, options):
+		"""
+		
+		"""
+		
+		# layer: 	map layer definition:
+		# -src:			shpfiles,kml,geojson,...
+		# -filter: 		get projected+filtered polygons
+		# -join: 		join polygons
+		# -simplify:	reduce quality
+		# crop: 	crop polygons
+		# export: 	save svg map
+		
+		""" (1) proj: map projection 
+		
+		
+		
+		
+		"""
+		options['proj']
 
 
 
@@ -1455,6 +1534,11 @@ class KartographOptions(object):
 			self.llbbox = (-180,-90,180,90)
 
 
+class Error(Exception):
+    """Base class for exceptions in this module."""
+    pass
+    
+    
 
 class Utils:
 	@staticmethod
