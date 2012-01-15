@@ -22,7 +22,7 @@ def parse_options(opts):
 	# projection
 	parse_proj(opts)
 	parse_layers(opts)
-	#parse_bounds(opts)
+	parse_bounds(opts)
 	#parse_export(opts)
 
 
@@ -109,3 +109,53 @@ def parse_layer_simplify(layer):
 		layer['simplify'] = float(layer['simplify'])
 	except ValueError:
 		raise Error('could not convert simplification amount to float')
+
+		
+def parse_bounds(opts):
+	if 'bounds' not in opts: 
+		opts['bounds'] = { }
+	bounds = opts['bounds']
+	if 'mode' not in bounds:
+		bounds['mode'] = 'bbox'
+	if 'data' not in bounds:
+		bounds['data'] = [-180,-90,180,90]
+		bounds['mode'] = 'bbox'
+	mode = bounds['mode']
+	data = bounds['data']
+	if mode == "bbox":
+		try:
+			if len(data) == 4:
+				for i in range(0,4):
+					data[i] = float(data[i])
+			else:
+				raise Error('bounds mode bbox requires array with exactly 4 values [lon0,lat0,lon1,lat]')
+		except Error as err:
+			raise err
+		except:
+			raise Error('bounds mode bbox requires array with exactly 4 values [lon0,lat0,lon1,lat]') 
+	elif mode == "points":
+		try:
+			for i in range(0,len(data)):
+				pt = data[i]
+				if len(pt) == 2:
+					pt = map(float, pt)
+				else:
+					raise Error('bounds mode points requires array with (lon,lat) tuples')
+		except Error as err:
+			raise err
+		except:
+			raise Error('bounds mode points requires array with (lon,lat) tuples')
+	elif mode in ("polygons","polygon"):
+		if "layer" not in data or not is_str(data["layer"]):
+			raise Error('you must specify a layer for bounds mode '+mode)
+		if "attribute" not in data or not is_str(data["attribute"]):
+			raise Error('you must specify an attribute for bounds mode '+mode)
+		if "ids" not in data:
+			raise Error('you must specify a list of ids for bounds mode '+mode)
+		if is_str(data["ids"]):
+			data["ids"] = [data["ids"]]
+		if "min_area" in data:
+			try:
+				data["min_area"] = float(data["min_area"])
+			except:
+				raise Error('min_area must be an integer or float')
