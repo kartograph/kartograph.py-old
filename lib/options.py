@@ -4,13 +4,10 @@ API 2.0
 helper methods for validating options dictionary
 """
 
-import os.path, proj
+import os.path, proj, errors
 
 
-class OptionParseError(Exception):
-    """Base class for exceptions in this module."""
-    pass    
-Error = OptionParseError
+Error = errors.OptionParseError
 
 def is_str(s):
 	return isinstance(s, (str, unicode))
@@ -23,7 +20,7 @@ def parse_options(opts):
 	parse_proj(opts)
 	parse_layers(opts)
 	parse_bounds(opts)
-	#parse_export(opts)
+	parse_export(opts)
 
 
 def parse_proj(opts):
@@ -159,3 +156,19 @@ def parse_bounds(opts):
 				data["min_area"] = float(data["min_area"])
 			except:
 				raise Error('min_area must be an integer or float')
+				
+
+def parse_export(opts):
+	if "export" not in opts:
+		opts["export"] = {}
+	exp = opts["export"]
+	if "width" not in exp and "height" not in exp:
+		exp["width"] = 1000
+		exp["height"] = "auto"
+	elif "height" not in exp:
+		exp["height"] = "auto"
+	elif "width" not in exp:
+		exp["width"] = "auto"
+		
+	if "ratio" not in exp:
+		exp["ratio"] = "auto"		
