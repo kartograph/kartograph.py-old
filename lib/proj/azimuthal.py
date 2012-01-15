@@ -50,12 +50,13 @@ class Azimuthal(Proj):
 		y1 = self.r + self.r * math.sin(theta)
 		return (x1,y1)
 		
-	def world_bounds(self, llbbox=(-180,-90,180,90)):
-		from gisutils import Bounds2D
+	def world_bounds(self, bbox, llbbox=(-180,-90,180,90)):
 		if llbbox == (-180,-90,180,90):
-			bbox = Bounds2D(width=self.r*2, height=self.r*2)
+			d = self.r*2
+			bbox.update((0,0))
+			bbox.update((d,d))
 		else:
-			bbox = super(Azimuthal, self).world_bounds(llbbox)
+			bbox = super(Azimuthal, self).world_bounds(bbox, llbbox)
 		return bbox
 		
 	def sea_shape(self, llbbox=(-180,-90,180,90)):
@@ -77,6 +78,10 @@ class Azimuthal(Proj):
 		
 	def __str__(self):
 		return 'Proj('+self.name+', lon0=%s, lat0=%s)' % (self.lon0, self.lat0)
+
+	@staticmethod
+	def attributes():
+		return ['lon0','lat0']
 
 	
 

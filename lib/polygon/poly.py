@@ -38,8 +38,8 @@ class PolyPolygon(AbstractPolygon):
 	def __getitem__(self, key):
 		return self.poly[key]
 
-	def addContour(self, contour):
-		self.poly.addContour(contour)
+	def addContour(self, contour, isHole=False):
+		self.poly.addContour(contour, isHole)
 				
 	def __and__(self, other):
 		from Polygon import Polygon as Poly
@@ -62,4 +62,24 @@ class PolyPolygon(AbstractPolygon):
 		
 	def isInside(self, x, y):
 		return self.poly.isInside(x,y)	
+		
+	def svgPath(self):
+		"""
+		returns the path string representation of this polygon
+		"""
+		ps = ''
+		pts = self.points[:]
+		if self.closed:
+			pts.append(pts[0])
+		for pt in pts:
+			if pt.deleted: continue #ignore deleted points
+			if ps == '': ps = 'M'
+			else: ps += 'L'
+			if useInt:
+				ps += '%d,%d' % (round(pt.x), round(pt.y))
+			else:
+				ps += '%.3f,%.3f' % (pt.x, pt.y)
+		if self.closed: 
+			ps += 'Z' # close path
+		return ps
 		

@@ -30,7 +30,7 @@ class AbstractPolygon(object):
 	def __getitem__(self, key):
 		raise NotImplementedError
 
-	def addContour(self, contour):
+	def addContour(self, contour, isHole=False):
 		raise NotImplementedError
 		
 	def __and__(self, other):
@@ -54,4 +54,5 @@ class AbstractPolygon(object):
 	def isInside(self, x, y):
 		raise NotImplementedError
 		
-		
+	def svgPath(self):
+		raise NotImplementedError

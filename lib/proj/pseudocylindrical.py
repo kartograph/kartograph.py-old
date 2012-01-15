@@ -18,6 +18,7 @@
 
 from cylindrical import Cylindrical
 import math
+from math import radians as rad
 
 class PseudoCylindrical(Cylindrical):
 	def __init__(self, lon0=0.0, flip = 0):
@@ -247,4 +248,9 @@ class Loximuthal(PseudoCylindrical):
 		p = super(Loximuthal, self).toXML()
 		p['lat0'] = str(self.lat0)
 		return p
+		
+	@staticmethod
+	def attributes():
+		return ['lon0','lat0','flip']
+
 

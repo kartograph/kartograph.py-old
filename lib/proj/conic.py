@@ -47,6 +47,11 @@ class Conic(Proj):
 		p['lat2'] = str(self.lat2)
 		return p
 
+	@staticmethod
+	def attributes():
+		return ['lon0','lat0','lat1','lat2']
+
+
 
 class LCC(Conic):
 	"""

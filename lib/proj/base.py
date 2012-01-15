@@ -105,6 +105,13 @@ class Proj(object):
 		return p
 	
 	@staticmethod
+	def attributes():
+		"""
+		returns array of attribute names of this projection 
+		"""
+		return []
+	
+	@staticmethod
 	def fromXML(xml):
 		id = xml['id']
 		if id in projections:

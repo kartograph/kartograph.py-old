@@ -95,6 +95,10 @@ class Cylindrical(Proj):
 	def __str__(self):
 		return 'Proj('+self.name+', lon0=%s)' % self.lon0
 
+	@staticmethod
+	def attributes():
+		return ['lon0','flip']
+
 	def ll(self, lon, lat):
 		if self.flip == 1:
 			return (-lon, -lat)
@@ -139,6 +143,11 @@ class CEA(Cylindrical):
 		p = super(CEA, self).toXML()
 		p['lat1'] = str(self.lat1)
 		return p
+		
+	@staticmethod
+	def attributes():
+		return ['lon0','lat1', 'flip']
+
 		
 	def __str__(self):
 		return 'Proj('+self.name+', lon0=%s, lat1=%s)' % (self.lon0, self.lat1)
