@@ -7,5 +7,5 @@ class OptionParseError(Exception):
     pass    
 
 
-class ShapefileAttributesError(Exception)
+class ShapefileAttributesError(Exception):
 	pass
