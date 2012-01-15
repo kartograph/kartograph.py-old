@@ -11,3 +11,7 @@ tmp/
 doc/
 data/shp/
 *.svg
+
+siv_maps.py
+
+t.json
