@@ -47,21 +47,30 @@ from gisutils import Bounds2D, Point, View, Polygon
 import gisutils
 import proj
 
+
+
 class Kartograph:
 
-	def __init__(self, options=None):
+	def __init__(self, options=None, api2=False):
 		self.options = options
 		if self.options is None: 
 			self.options = KartographOptions()
 		
 		self.options.applyDefaults()
 		
+		self.sf_reader = {} # shapefile reader
+		self.sf_recs = {} # shapefile record
+		self.sf_shapes = {} # shapefile shapes
+		self.shp_area = {} # shape area cache
 		self.shp_src = {}
-		self.shp_src['countries'] = self.options.data_path + 'shp/ne_10m_admin_0_countries'
-		self.shp_src['regions'] = self.options.data_path + 'shp/ne_10m_admin_1_states_provinces_shp'
-		self.shp_src['lakes'] = self.options.data_path + 'shp/ne_10m_lakes.shp'
-		
-		self.load_shape_records()
+	
+		if not api2:	
+			# deprecated stuff
+			self.shp_src['countries'] = self.options.data_path + 'shp/ne_10m_admin_0_countries'
+			self.shp_src['regions'] = self.options.data_path + 'shp/ne_10m_admin_1_states_provinces_shp'
+			self.shp_src['lakes'] = self.options.data_path + 'shp/ne_10m_lakes.shp'
+			self.load_shape_records()
+			self.build_country_index() 
 		
 		
 
@@ -76,19 +85,18 @@ class Kartograph:
 		
 		if options.verbose: print "loading shapefile records"
 		
-		self.sf_reader = sread = {} # shapefile reader
-		self.sf_recs = srecs = {} # shapefile record
-		self.sf_shapes = sshp = {} # shapefile shapes
-		self.shp_area = sarea = {} # shape area cache
+		sread = self.sf_reader
+		srecs = self.sf_recs
+		sshp = self.sf_shapes
+		sarea = self.shp_area
 		
 		for shpfile in self.shp_src:
+			if shpfile in sread: continue
 			sread[shpfile] = shapefile.Reader(self.shp_src[shpfile]) # intantiate reader
 			srecs[shpfile] = sread[shpfile].records() # load records
 			sshp[shpfile] = [None]*len(srecs[shpfile]) # prepare shape cache
 			sarea[shpfile] = [None]*len(srecs[shpfile]) # prepare shp area cache
-			
-		self.build_country_index() 
-			
+				
 
 	def get_shape(self, sf, index):
 		"""
@@ -99,7 +107,18 @@ class Kartograph:
 			shp = self.sf_shapes[sf][index] = self.sf_reader[sf].shapeRecord(index).shape
 		return shp
 
-
+	def shape_area(self, sf, index):
+		"""
+		returns the area of a shape, either from cache or freshly computed
+		"""
+		if self.shp_area[sf][index] == None:
+			# not in cache, so compute
+			shp = self.get_shape(sf, index)
+			self.shp_area[sf][index] = gisutils.shape_area(shp)
+			
+		return self.shp_area[sf][index]
+		
+	# deprecated	
 	def build_country_index(self):
 		"""
 		creates a dict of iso3 -> index
@@ -123,7 +142,7 @@ class Kartograph:
 			ci[iso3] = i
 		self.country_index = ci
 	
-	
+	# deprecated
 	def get_country_record(self, iso3):
 		"""
 		convenient wrapper around sf_recs and country_index
@@ -134,7 +153,7 @@ class Kartograph:
 		else:
 			raise KeyError(iso3+' is no valid country-code')
 			
-	
+	# deprecated
 	def get_country_shape(self, iso3):
 		"""
 		convenient wrapper around get_shape and country_index
@@ -145,19 +164,7 @@ class Kartograph:
 		else:
 			raise KeyError(iso3+' is no valid country-code')
 	
-	
-	def shape_area(self, sf, index):
-		"""
-		returns the area of a shape, either from cache or freshly computed
-		"""
-		if self.shp_area[sf][index] == None:
-			# not in cache, so compute
-			shp = self.get_shape(sf, index)
-			self.shp_area[sf][index] = gisutils.shape_area(shp)
-			
-		return self.shp_area[sf][index]
-		
-	
+	# deprecated
 	def get_country_region_indices(self, iso3):
 		"""
 		returns a list of region shape indices for a country
@@ -222,7 +229,7 @@ class Kartograph:
 			print iso3, kept, 'shapes kept,', skipped,'shapes skipped'
 		return bbox
 
-
+	# deprecated
 	def get_region_rec(self, iso3, region):
 		"""
 		get bounding box for region
@@ -235,7 +242,7 @@ class Kartograph:
 			if rec[index] == value:
 				return rec
 	
-	
+	# deprecated
 	def get_region_shape(self, iso3, region):
 		"""
 		get bounding box for region
@@ -248,7 +255,7 @@ class Kartograph:
 			if rec[index] == value:
 				return self.get_shape('regions', s)
 				
-
+	# deprecated
 	def get_region_bbox(self, iso3, globe, region):
 		"""
 		get bounding box for region
@@ -273,7 +280,7 @@ class Kartograph:
 					bbox.update(pt)
 		return bbox
 	
-	
+	# deprecated
 	def get_region_center(self, iso3, globe):
 		"""
 		get bounding box for region
@@ -1367,8 +1374,14 @@ class Kartograph:
 		import options
 		options.parse_options(opts)
 
+		self.prepare_layers(opts)
+		
 		print opts		
 		
+		
+	def prepare_layers(self, opts):
+		
+		self.load_shape_records()
 		
 		
 	def get_map_center(self, opts):
@@ -1406,30 +1419,7 @@ class Kartograph:
 		
 		return bbox
 	
-		
 	
-
-	
-	def render_map2(self, options):
-		"""
-		
-		"""
-		
-		# layer: 	map layer definition:
-		# -src:			shpfiles,kml,geojson,...
-		# -filter: 		get projected+filtered polygons
-		# -join: 		join polygons
-		# -simplify:	reduce quality
-		# crop: 	crop polygons
-		# export: 	save svg map
-		
-		""" (1) proj: map projection 
-		
-		
-		
-		
-		"""
-		options['proj']
 
 
 
