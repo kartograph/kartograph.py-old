@@ -95,7 +95,7 @@ def parse_args():
 	
 	global command, options
 	
-	import math
+	import math, json, os.path
 	
 	options = KartographOptions()
 	
@@ -105,6 +105,25 @@ def parse_args():
 	
 	command = sys.argv[1]
 	
+	if command == "generate":
+		cfg = {}
+		output = None
+		opts, args = getopt.getopt(sys.argv[2:], 'c:o:', ['config=','output='])
+		for o, a in opts:
+			if o in ('-c', '--config'):
+				opt_src = a
+				if os.path.exists(opt_src):
+					t = open(opt_src, 'r').read()
+					cfg = json.loads(t)
+				else:
+					raise Error('config json not found')
+			elif o in ('o', '--output'):	
+				output = a
+		K = Kartograph()
+		K.generate(cfg,output)
+		sys.exit(0)
+		
+		
 	if command not in ('world','country','regions','layer','region','countries','bbox'):
 		usage()
 		sys.exit(2)
